@@ -1,0 +1,16 @@
+.venv/
+.venv-lite/
+.hf-cache/
+.hf-models/
+__pycache__/
+*.pyc
+.env
+data/*.json
+data/*.jsonl
+data/*.csv
+images/*.png
+images/*.txt
+indexes/*.npy
+indexes/*.index
+indexes/*.json
+outputs/
