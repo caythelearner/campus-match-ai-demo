@@ -2125,7 +2125,7 @@ HTML_TEMPLATE = """<!doctype html>
           <p>给展示和答辩用：看数据从哪里来、推荐为什么成立、哪些关系需要提醒。</p>
           <div class="tag-row">
             <span class="tag">全量数据</span>
-            <span class="tag blue">功能总览</span>
+            <span class="tag blue">产品模块</span>
             <span class="tag rose">风险治理</span>
           </div>
         </button>
@@ -2261,7 +2261,7 @@ HTML_TEMPLATE = """<!doctype html>
     };
     const tabs = [
       ["dashboard", "星图看板"],
-      ["features", "功能总览"],
+      ["features", "产品模块"],
       ["daily", "每日状态"],
       ["matches", "心动星球"],
       ["scenes", "闪电搭子"],
@@ -2273,81 +2273,53 @@ HTML_TEMPLATE = """<!doctype html>
     ];
     const featureCatalog = [
       {
-        name: "AI 灵魂画像",
-        admin: "管理员查看问卷、结构化画像、标签证据、隐性偏好显性化结果。",
-        user: "用户通过 AI 访谈输入近况，系统提取兴趣、价值观、雷点和关系目标。",
-        tech: "LLM/Prompt 结构化抽取，当前 demo 用规则抽取离线模拟。",
-        course: "第2章 知识获取与隐性知识显性化；第3章 属性抽取；第9章 Prompt。"
+        name: "画像与标签证据",
+        admin: "查看用户画像、兴趣价值观、雷点、标签证据和脱敏访谈片段。",
+        user: "注册后通过轻量访谈生成灵魂卡片；点开标签能看到为什么会有这个标签。",
+        tech: "结构化画像抽取 + 标签证据检索。",
+        course: "知识获取、属性抽取、RAG 证据链。"
       },
       {
-        name: "心动星球匹配",
-        admin: "查看每个用户的 Top-K 推荐、分数拆解、共同点、差异点和风险提示。",
-        user: "用户每天可以选择查看心动推荐，并根据破冰话题推动关系升温。",
-        tech: "文本向量、图谱相似度、价值观一致性、图片向量和治理降权融合排序。",
-        course: "第4章 图计算；第7章 向量检索与推荐。"
+        name: "心动推荐与解释",
+        admin: "查看 Top-K 推荐、分数拆解、共同点、差异点和风险提示。",
+        user: "在心动星球看到推荐对象，以及一段能看懂的匹配理由。",
+        tech: "Sentence-BERT 向量、图谱相似度、价值观匹配、GNN link score 融合排序。",
+        course: "向量检索、图计算、链接预测。"
       },
       {
-        name: "用户知识图谱与 GraphRAG",
-        admin: "查看用户-兴趣-价值观-时间-地点三元组、Neo4j CSV/Cypher 和路径证据。",
-        user: "用户看到的推荐理由来自共同兴趣、共同价值观、空闲时间等多跳证据。",
-        tech: "知识图谱三元组、NetworkX/GEXF、Neo4j 留痕、GraphRAG 解释。",
-        course: "第3章 知识图谱；第5章 图数据库；第10章 GraphRAG。"
+        name: "雷达与闪电搭子",
+        admin: "查看搜索意图、任务场景、时间地点约束和候选搭子排序。",
+        user: "用大白话说“想吃饭/运动/自习”，系统自动转成可检索的搭子需求。",
+        tech: "意图图谱、混合检索、场景匹配、地点安全上下文。",
+        course: "语义检索、知识图谱、上下文增强。"
       },
       {
-        name: "多模态与图片表征",
-        admin: "查看合成头像、图片 prompt、图片 embedding 形状和多模态匹配权重。",
-        user: "用户看到清晰的灵魂卡片头像，未来可升级为图像生成 API 或 CLIP。",
-        tech: "离线合成头像、颜色直方图 embedding，可切换 CLIP/图像生成服务。",
-        course: "第6章 多模态知识表征；第7章 向量数据库。"
+        name: "聊天辅助与关系复盘",
+        admin: "查看聊天 RAG 命中来源、热度曲线、回复延迟、共同话题和关系状态。",
+        user: "聊天时得到更自然的破冰建议；互动几天后能看到关系热度和周报。",
+        tech: "实时 Top-K 检索、聊天知识库、聚合指标、画像更新。",
+        course: "RAG、动态知识管理、知识生命周期。"
       },
       {
-        name: "闪电搭子动态场景",
-        admin: "查看实时任务、场景意图、地点安全上下文和候选搭子排序。",
-        user: "用户输入今天想做什么，系统按地点、时间、任务类型和安全等级推荐搭子。",
-        tech: "任务意图抽取、时间窗口过滤、LBS 模拟、安全上下文 RAG。",
-        course: "第2章 动态知识管理；第7章 语义检索；第10章 上下文增强。"
+        name: "首约策划",
+        admin: "查看候选地点、公开程度、人流、天气和替代地点建议。",
+        user: "想线下见面时，系统优先推荐短时、公开、方便结束的校园地点。",
+        tech: "地点知识建模、图查询、风险上下文解释。",
+        course: "图数据库、知识建模、情境化推荐。"
       },
       {
-        name: "雷达意图图谱与混合检索",
-        admin: "查看显性意图、隐性意图、图谱扩散路径，以及关键词/向量/图谱/约束的重排分数。",
-        user: "用户可以直接说大白话，系统把需求翻译成可检索的画像条件。",
-        tech: "Text-to-Graph 意图映射、稀疏检索、Sentence-BERT 向量召回、图谱约束重排。",
-        course: "第7章混合检索；第9章知识增强 Prompt；第10章 RAG 重排。"
+        name: "信用治理与安全",
+        admin: "查看失约、迟取消、不适反馈、可见度降权和复核策略。",
+        user: "守约和反馈会影响信用分；高风险行为会降低曝光或进入人工复核。",
+        tech: "治理事件建模、动态图权重、策略解释。",
+        course: "知识治理、动态图权重、风险控制。"
       },
       {
-        name: "画像标签证据 RAG",
-        admin: "查看每个标签背后的访谈证据、脱敏文本、置信度和 User-Evidence-Tag 路径。",
-        user: "用户点灵魂卡片标签，可以知道这个标签为什么出现。",
-        tech: "标签级 RAG 证据检索、脱敏展示、路径可解释。",
-        course: "第2章隐性知识显性化；第10章 RAG 检索增强。"
-      },
-      {
-        name: "关系热度与画像更新",
-        admin: "查看 7 天热度曲线、聊天聚合指标、关系状态和画像更新信号。",
-        user: "用户聊天或反馈后，热度、共同话题和画像标签会随天数推进变化。",
-        tech: "合成聊天指标、情绪/回复延迟/共同话题聚合、知识编辑式画像更新。",
-        course: "第2章 知识生命周期；第9章 后续可扩展聊天摘要 Prompt。"
-      },
-      {
-        name: "首约策划与安全提醒",
-        admin: "查看线下约会地点、模拟 LBS、天气、人流、安全等级和替代建议。",
-        user: "用户决定见面时，系统给出轻量首约建议和风险提醒。",
-        tech: "地点知识建模、天气/LBS 模拟、RAG 风格风险解释。",
-        course: "第3章 地点知识建模；第5章 图查询；第10章 安全建议。"
-      },
-      {
-        name: "知识治理与信用分",
-        admin: "查看失约、迟取消、不适反馈、骚扰标记、推荐降权和条件禁言。",
-        user: "用户反馈会影响信用分、可见度、闪电搭子冷却和人工复核提示。",
-        tech: "治理事件合成、动态图权重/可见度调整、策略解释。",
-        course: "第2章 知识治理；第4章 动态图权重；第10章 风险上下文。"
-      },
-      {
-        name: "GNN 图训练",
-        admin: "训练链接预测和风险节点分类，并把 link score 接回推荐排序。",
-        user: "用户侧体现为更准确的潜在关系预测和更谨慎的安全策略。",
-        tech: "torch GraphSAGE 链接预测 + GCN 节点分类；缺 PyG 时使用纯 torch 图卷积 fallback。",
-        course: "第4章 GCN 节点分类/链接预测。"
+        name: "技术看板",
+        admin: "集中查看 Neo4j 图谱、FAISS 对比、GraphRAG 路径和 GNN 训练结果。",
+        user: "用户不直接看到这些技术细节，只感受到推荐更可解释、搜索更准、提醒更稳。",
+        tech: "Neo4j CSV/Cypher、Flat/IVF/HNSW、GraphSAGE、GCN。",
+        course: "图数据库、ANN 检索、图神经网络。"
       }
     ];
     const experienceActions = [
@@ -2355,7 +2327,7 @@ HTML_TEMPLATE = """<!doctype html>
       {id: "match", label: "看今日推荐", desc: "看看谁和你比较合拍", deltaHeat: 0.06, deltaCredit: 0, course: "第4/7/10章"},
       {id: "scene", label: "找个搭子", desc: "饭、学习、运动都可以先发起", deltaHeat: 0.04, deltaCredit: 1, course: "第2/7/10章"},
       {id: "chat", label: "破冰聊天", desc: "用一个轻松问题把话接起来", deltaHeat: 0.08, deltaCredit: 0, course: "第9/10章"},
-      {id: "date", label: "约见面", desc: "挑个安全、不尴尬的校内地点", deltaHeat: 0.10, deltaCredit: 1, course: "第3/5/10章"},
+      {id: "date", label: "首约策划", desc: "先选短时、公开、方便结束的校园地点", deltaHeat: 0.10, deltaCredit: 1, course: "第3/5/10章"},
       {id: "feedback", label: "见后反馈", desc: "记录这次见面的真实感受", deltaHeat: 0.05, deltaCredit: 2, course: "第2/4章"}
     ];
     const quickReplies = [
@@ -3506,17 +3478,17 @@ HTML_TEMPLATE = """<!doctype html>
     function renderFeatures() {
       document.getElementById("content").innerHTML = `
         <div class="section-head">
-          <h3>功能总览与课件对应</h3>
-          <span class="muted">管理员视角：证明 demo 覆盖原始任务要求</span>
+          <h3>产品模块与课程方法</h3>
+          <span class="muted">管理员视角：把产品功能和实际跑过的技术链路对应起来</span>
         </div>
         <div class="feature-map">
           ${featureCatalog.map((feature) => `
             <article class="feature-card">
               <h4>${escapeHtml(feature.name)}</h4>
               <p><strong>管理员看到：</strong>${escapeHtml(feature.admin)}</p>
-              <p><strong>用户端体现：</strong>${escapeHtml(feature.user)}</p>
+              <p><strong>用户会感知到：</strong>${escapeHtml(feature.user)}</p>
               <p><strong>技术实现：</strong>${escapeHtml(feature.tech)}</p>
-              <p><strong>课件对应：</strong>${escapeHtml(feature.course)}</p>
+              <p><strong>课程方法：</strong>${escapeHtml(feature.course)}</p>
             </article>
           `).join("")}
         </div>
@@ -3575,7 +3547,7 @@ HTML_TEMPLATE = """<!doctype html>
         <div class="panel" style="margin-top:12px">
           <h3>时间变化解释</h3>
           <p class="copy">管理员看到的是关系状态随天数变化的聚合指标：聊天热度、消息数、回复延迟、积极比例、共同话题命中和治理策略。用户端只看到自己的聊天、推荐和安全提醒，不看到全局监控表。</p>
-          <p class="copy"><strong>课件对应：</strong>第2章知识生命周期/动态知识管理，第4章动态图权重，第7章向量检索排序，第10章GraphRAG解释与上下文提醒。</p>
+          <p class="copy"><strong>方法依据：</strong>用动态知识管理记录关系变化，用图权重和向量排序调整推荐，再用 GraphRAG 把提醒解释成人能看懂的话。</p>
         </div>
       `;
       document.getElementById("adminDaySelect").addEventListener("change", (event) => {
@@ -5559,7 +5531,7 @@ HTML_TEMPLATE = """<!doctype html>
 
     function renderDailyIntentCard(intent) {
       if (!intent) {
-        return `<div class="completion-banner">说一句今天想做的事，系统会自动判断是找搭子、破冰、约见面还是记录状态。</div>`;
+        return `<div class="completion-banner">说一句今天想做的事，系统会自动判断是找搭子、破冰、首约策划还是记录状态。</div>`;
       }
       return `
         <div class="completion-banner">
