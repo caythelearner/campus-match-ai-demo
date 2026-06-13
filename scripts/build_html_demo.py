@@ -2604,11 +2604,7 @@ HTML_TEMPLATE = """<!doctype html>
     }
 
     #userApp #experienceProfile {
-      grid-column: 1 / -1;
-      max-height: none;
-      overflow: hidden;
-      padding: 8px 10px;
-      border-radius: 22px;
+      display: none;
     }
 
     #userApp #experienceProfile .profile-media {
@@ -2647,12 +2643,7 @@ HTML_TEMPLATE = """<!doctype html>
     }
 
     #userApp .user-rail .top-actions {
-      grid-column: 1 / -1;
-      display: grid !important;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      justify-content: stretch !important;
-      gap: 6px;
-      margin-top: 0 !important;
+      display: none !important;
     }
 
     #userApp .user-rail .top-actions .tab-button {
@@ -2864,7 +2855,7 @@ HTML_TEMPLATE = """<!doctype html>
       }
 
       #userApp .user-main {
-        height: calc(100% - 190px);
+        height: calc(100% - 86px);
         overflow-y: auto;
         scrollbar-width: thin;
       }
