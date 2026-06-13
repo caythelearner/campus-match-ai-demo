@@ -3464,7 +3464,7 @@ HTML_TEMPLATE = """<!doctype html>
     <main class="main">
       <header class="topbar">
         <div>
-          <h2>Campus Match AI 管理员星图台</h2>
+          <h2>Campus Match AI 管理台</h2>
           <p id="generatedInfo"></p>
         </div>
         <div>
@@ -3568,16 +3568,12 @@ HTML_TEMPLATE = """<!doctype html>
       "#情绪稳定": "今天没胃口，想找个细心的人陪我散步"
     };
     const tabs = [
-      ["dashboard", "星图看板"],
-      ["features", "产品模块"],
-      ["daily", "每日状态"],
-      ["matches", "心动星球"],
-      ["scenes", "闪电搭子"],
-      ["dynamics", "关系热度"],
-      ["dates", "线下安全"],
-      ["governance", "知识治理"],
-      ["tech", "技术证据"],
-      ["graph", "图谱留痕"]
+      ["dashboard", "总览"],
+      ["profiles", "用户画像"],
+      ["matches", "匹配推荐"],
+      ["scenes", "搭子任务"],
+      ["relations", "关系安全"],
+      ["graph", "技术图谱"]
     ];
     const featureCatalog = [
       {
@@ -4011,14 +4007,10 @@ HTML_TEMPLATE = """<!doctype html>
       }
       const renderers = {
         dashboard: renderDashboard,
-        features: renderFeatures,
-        daily: renderDailyAdmin,
+        profiles: renderProfilesAdmin,
         matches: renderMatches,
         scenes: renderScenes,
-        dynamics: renderDynamics,
-        dates: renderDates,
-        governance: renderGovernance,
-        tech: renderTechEvidence,
+        relations: renderRelationsSafety,
         graph: renderGraph
       };
       renderers[state.tab]();
@@ -4112,6 +4104,57 @@ HTML_TEMPLATE = """<!doctype html>
           ${tags(profile.values, "blue")}
           ${tags(profile.deal_breakers, "rose")}
         </div>
+      `;
+    }
+
+    function renderProfilesAdmin() {
+      const profile = currentProfile();
+      const governance = governanceById[profile.user_id] || {};
+      const evidenceRows = (profileEvidenceByUser[profile.user_id] || []).slice(0, 4);
+      document.getElementById("content").innerHTML = `
+        <div class="section-head">
+          <h3>用户画像</h3>
+          <span class="muted">画像、标签证据和信用状态放在同一页看</span>
+        </div>
+        <div class="two-col">
+          <section class="panel">
+            <div class="profile-media">
+              <img src="${imagePath(profile.user_id)}" alt="${escapeHtml(profile.display_name)}" onerror="this.style.visibility='hidden'">
+              <div>
+                <h3>${escapeHtml(profile.display_name || profile.user_id)}</h3>
+                <p>${escapeHtml(profile.school || "")} / ${escapeHtml(profile.major || "")} / ${escapeHtml(profile.grade || "")}</p>
+                <p>${escapeHtml(profile.campus || "")} / ${escapeHtml(profile.relationship_goal || "")}</p>
+              </div>
+            </div>
+            <p class="copy">${escapeHtml(profile.self_intro || "")}</p>
+            <p class="copy"><strong>理想型：</strong>${escapeHtml(profile.ideal_partner || "")}</p>
+            ${tags(profile.interests)}
+            ${tags(profile.values, "blue")}
+            ${tags(profile.deal_breakers, "rose")}
+          </section>
+          <section class="panel">
+            <div class="section-head">
+              <h3>治理状态</h3>
+              <span class="score-pill">${escapeHtml(governance.credit_score ?? 100)}</span>
+            </div>
+            <div class="kv">
+              <span>信用分</span><strong>${fmt(governance.credit_score ?? 100)}</strong>
+              <span>推荐可见度</span><strong>${fmt((governance.policy || {}).visibility_multiplier ?? 1)}</strong>
+              <span>冷却时间</span><strong>${fmt((governance.policy || {}).cooldown_hours ?? 0)} h</strong>
+              <span>是否复核</span><strong>${(governance.policy || {}).review_required ? "是" : "否"}</strong>
+            </div>
+            ${tags(((governance.policy || {}).reasons || ["无明显治理风险"]).slice(0, 4), (governance.policy || {}).review_required ? "rose" : "blue")}
+          </section>
+        </div>
+        <section class="panel" style="margin-top:12px">
+          <div class="section-head">
+            <h3>标签证据</h3>
+            <span class="muted">脱敏访谈/RAG 证据</span>
+          </div>
+          <div class="cards">
+            ${evidenceRows.length ? evidenceRows.map((row) => renderProfileEvidenceCard(row)).join("") : `<div class="empty">当前用户还没有标签证据</div>`}
+          </div>
+        </section>
       `;
     }
 
@@ -4970,6 +5013,97 @@ HTML_TEMPLATE = """<!doctype html>
       document.getElementById("adminDaySelect").addEventListener("change", (event) => {
         state.adminDay = Number(event.target.value) || 1;
         renderDailyAdmin();
+      });
+    }
+
+    function renderRelationsSafety() {
+      const rows = buildDailyAdminRows(state.adminDay);
+      const avgHeat = rows.length ? rows.reduce((sum, row) => sum + row.heat, 0) / rows.length : 0;
+      const riskRows = rows.filter((row) => row.riskLevel !== "low");
+      const dateRows = data.dateContexts || [];
+      const governanceRows = data.governanceRecords || [];
+      const riskyGovernance = governanceRows.filter((row) => {
+        const policy = row.policy || {};
+        return row.credit_score < 85 || policy.review_required || policy.conditional_mute || policy.visibility_multiplier < 1;
+      });
+      document.getElementById("content").innerHTML = `
+        <div class="section-head">
+          <h3>关系安全</h3>
+          <div class="toolbar">
+            <select id="adminDaySelect">
+              ${Array.from({length: 7}, (_, index) => {
+                const day = index + 1;
+                return `<option value="${day}" ${day === state.adminDay ? "selected" : ""}>Day ${day}</option>`;
+              }).join("")}
+            </select>
+          </div>
+        </div>
+        <div class="metrics">
+          ${metric("监控关系", rows.length)}
+          ${metric("平均热度", `${Math.round(avgHeat * 100)}%`)}
+          ${metric("风险关系", riskRows.length)}
+          ${metric("首约方案", dateRows.length)}
+          ${metric("治理预警", riskyGovernance.length)}
+        </div>
+        <div class="two-col">
+          <section class="panel">
+            <div class="section-head">
+              <h3>关系热度与干预</h3>
+              <span class="muted">聊天气象站</span>
+            </div>
+            <div class="trace-list">
+              ${rows.slice(0, 6).map((row) => `
+                <div class="trace-row">
+                  <span>${escapeHtml(row.riskText)}</span>
+                  <strong>${escapeHtml(row.pairLabel)}<br><span>${escapeHtml(row.topics || "暂无共同话题")} / ${escapeHtml(row.adminAction)}</span></strong>
+                  <span>${Math.round(row.heat * 100)}%</span>
+                </div>
+              `).join("") || `<div class="empty">暂无关系状态</div>`}
+            </div>
+          </section>
+          <section class="panel">
+            <div class="section-head">
+              <h3>首约与地点安全</h3>
+              <span class="muted">公开地点优先</span>
+            </div>
+            <div class="trace-list">
+              ${dateRows.slice(0, 6).map((row) => {
+                const risk = row.risk_assessment || {};
+                const location = row.location || {};
+                return `
+                  <div class="trace-row">
+                    <span class="risk-${escapeHtml(risk.risk_level || "low")}">${escapeHtml(risk.risk_level || "low")}</span>
+                    <strong>${escapeHtml(location.name || row.plan_id)}<br><span>${escapeHtml(row.proposed_time || "")} / ${escapeHtml(row.date_suggestion || "")}</span></strong>
+                    <span>${escapeHtml(location.crowd_level || "")}</span>
+                  </div>
+                `;
+              }).join("") || `<div class="empty">暂无首约方案</div>`}
+            </div>
+          </section>
+        </div>
+        <section class="panel" style="margin-top:12px">
+          <div class="section-head">
+            <h3>信用治理</h3>
+            <span class="muted">只展示需要老师关注的用户</span>
+          </div>
+          <div class="trace-list">
+            ${riskyGovernance.slice(0, 8).map((row) => {
+              const user = byId[row.user_id] || {};
+              const policy = row.policy || {};
+              return `
+                <div class="trace-row">
+                  <span>${escapeHtml(row.user_id)}</span>
+                  <strong>${escapeHtml(user.display_name || "")} / 信用 ${escapeHtml(row.credit_score)}<br><span>${escapeHtml((policy.reasons || []).join("；") || "策略降权")}</span></strong>
+                  <span>${escapeHtml(policy.visibility_multiplier ?? 1)}</span>
+                </div>
+              `;
+            }).join("") || `<div class="empty">当前没有需要复核的治理记录</div>`}
+          </div>
+        </section>
+      `;
+      document.getElementById("adminDaySelect").addEventListener("change", (event) => {
+        state.adminDay = Number(event.target.value) || 1;
+        renderRelationsSafety();
       });
     }
 
