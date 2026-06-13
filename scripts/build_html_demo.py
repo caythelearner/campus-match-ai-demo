@@ -112,10 +112,10 @@ HTML_TEMPLATE = """<!doctype html>
     body {
       margin: 0;
       background:
-        radial-gradient(circle at 18px 18px, rgba(8, 127, 115, 0.11) 1px, transparent 1.2px),
-        linear-gradient(118deg, rgba(8, 127, 115, 0.10), transparent 30%),
-        linear-gradient(238deg, rgba(212, 93, 67, 0.09), transparent 32%),
-        linear-gradient(180deg, #f8fbfa 0%, #eef6f2 46%, #fff6e7 100%);
+        radial-gradient(circle at 12% 14%, rgba(255,255,255,0.92) 0 2px, transparent 2.4px),
+        radial-gradient(circle at 86% 16%, rgba(168,207,251,0.30), transparent 26%),
+        radial-gradient(circle at 12% 74%, rgba(244,199,171,0.24), transparent 26%),
+        linear-gradient(135deg, #fdfdfd 0%, #f3f1f8 48%, #ebf4f5 100%);
       background-size: 88px 88px, auto, auto, auto;
       color: var(--ink);
       font-family: Inter, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
@@ -137,15 +137,66 @@ HTML_TEMPLATE = """<!doctype html>
       display: none !important;
     }
 
+    @keyframes galaxyFloat {
+      0% { transform: translate3d(0, 0, 0) rotate(0deg); }
+      50% { transform: translate3d(0, -18px, 0) rotate(5deg); }
+      100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+    }
+
+    @keyframes galaxyFloatReverse {
+      0% { transform: translate3d(0, 0, 0) rotate(0deg); }
+      50% { transform: translate3d(0, 20px, 0) rotate(-5deg); }
+      100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+    }
+
+    .galaxy-orb {
+      position: absolute;
+      border-radius: 999px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .galaxy-orb.blue {
+      width: 164px;
+      height: 164px;
+      right: 8%;
+      top: 12%;
+      background: radial-gradient(circle at 30% 30%, #ffffff, #a8cffb 42%, #7fa8d6 100%);
+      box-shadow: 0 24px 48px rgba(126, 157, 214, 0.34), inset -12px -12px 22px rgba(20,35,64,0.10);
+      animation: galaxyFloatReverse 8s ease-in-out infinite;
+    }
+
+    .galaxy-orb.gold {
+      width: 78px;
+      height: 78px;
+      right: 27%;
+      bottom: 16%;
+      background: radial-gradient(circle at 30% 30%, #fff5d1, #f4c7ab 48%, #d69e7b 100%);
+      box-shadow: 0 18px 34px rgba(214, 158, 123, 0.30), inset -7px -7px 14px rgba(95,58,34,0.10);
+      animation: galaxyFloat 7s ease-in-out infinite 0.4s;
+    }
+
+    .galaxy-orb.dark {
+      width: 34px;
+      height: 34px;
+      right: 5%;
+      bottom: 35%;
+      background: radial-gradient(circle at 30% 30%, #7b8190, #384151 50%, #111827);
+      box-shadow: 0 16px 30px rgba(17,24,39,0.24), inset -5px -5px 10px rgba(0,0,0,0.34);
+      animation: galaxyFloat 6.5s ease-in-out infinite;
+    }
+
     .mode-shell {
       min-height: 100vh;
       padding: 36px 22px;
       display: grid;
       align-items: center;
       background:
-        radial-gradient(circle at 18px 22px, rgba(255, 255, 255, 0.22) 1px, transparent 1.3px),
-        linear-gradient(145deg, rgba(255, 248, 234, 0.10), transparent 30%),
-        linear-gradient(122deg, #16262b 0%, #0d4d47 48%, #7a4a21 100%);
+        radial-gradient(circle at 12% 18%, rgba(255,255,255,0.90) 0 2px, transparent 2.4px),
+        radial-gradient(circle at 72% 18%, rgba(168,207,251,0.44), transparent 22%),
+        radial-gradient(circle at 82% 78%, rgba(244,199,171,0.42), transparent 22%),
+        radial-gradient(circle at 20% 82%, rgba(216,196,255,0.34), transparent 24%),
+        linear-gradient(135deg, #fdfdfd 0%, #f3f1f8 50%, #ebf4f5 100%);
       background-size: 92px 92px, auto, auto;
       position: relative;
       overflow: hidden;
@@ -157,9 +208,9 @@ HTML_TEMPLATE = """<!doctype html>
       inset: 0;
       pointer-events: none;
       background:
-        linear-gradient(120deg, transparent 0 42%, rgba(255, 255, 255, 0.08) 42.2% 42.6%, transparent 42.8%),
-        linear-gradient(18deg, transparent 0 64%, rgba(255, 220, 152, 0.13) 64.2% 64.5%, transparent 64.8%);
-      opacity: 0.75;
+        linear-gradient(120deg, transparent 0 48%, rgba(137, 126, 214, 0.16) 48.2% 48.45%, transparent 48.8%),
+        linear-gradient(18deg, transparent 0 68%, rgba(244, 199, 171, 0.24) 68.2% 68.45%, transparent 68.8%);
+      opacity: 0.9;
     }
 
     .mode-shell > * {
@@ -169,29 +220,39 @@ HTML_TEMPLATE = """<!doctype html>
     .mode-inner {
       width: min(1100px, 100%);
       margin: 0 auto;
+      z-index: 1;
     }
 
     .mode-hero {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
-      gap: 22px;
-      align-items: end;
-      margin-bottom: 18px;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 420px);
+      gap: 30px;
+      align-items: center;
+      margin-bottom: 24px;
     }
 
     .mode-hero h1 {
       margin: 0;
-      font-size: 46px;
-      line-height: 1.15;
+      font-size: clamp(64px, 9vw, 118px);
+      line-height: 0.88;
       letter-spacing: 0;
-      color: #ffffff;
+      color: #231f63;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .mode-hero h1 span {
+      color: transparent;
+      background: linear-gradient(90deg, #8aa8ff, #b58cff 58%, #efb28d);
+      -webkit-background-clip: text;
+      background-clip: text;
     }
 
     .mode-hero p {
-      margin: 10px 0 0;
-      color: rgba(255, 255, 255, 0.76);
-      font-size: 15px;
-      max-width: 780px;
+      margin: 18px 0 0;
+      color: #667085;
+      font-size: 16px;
+      max-width: 680px;
     }
 
     .mode-grid {
@@ -201,11 +262,13 @@ HTML_TEMPLATE = """<!doctype html>
     }
 
     .mode-card {
-      border: 1px solid rgba(255, 255, 255, 0.20);
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.92);
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
-      padding: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.72);
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.54);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      box-shadow: 0 22px 54px rgba(72, 76, 135, 0.12);
+      padding: 24px;
       text-align: left;
       color: inherit;
       min-height: 260px;
@@ -222,14 +285,17 @@ HTML_TEMPLATE = """<!doctype html>
       left: 0;
       right: 0;
       top: 0;
-      height: 5px;
-      background: linear-gradient(90deg, var(--accent), var(--amber), var(--violet));
+      height: 100%;
+      opacity: 0.68;
+      background:
+        radial-gradient(circle at 82% 18%, rgba(168,207,251,0.50), transparent 28%),
+        radial-gradient(circle at 14% 80%, rgba(244,199,171,0.34), transparent 30%);
     }
 
     .mode-card:hover {
-      border-color: rgba(255, 255, 255, 0.72);
-      transform: translateY(-2px);
-      box-shadow: 0 30px 72px rgba(0, 0, 0, 0.28);
+      border-color: rgba(255, 255, 255, 0.96);
+      transform: translateY(-5px);
+      box-shadow: 0 32px 74px rgba(72, 76, 135, 0.18);
     }
 
     .mode-card h2 {
@@ -240,7 +306,7 @@ HTML_TEMPLATE = """<!doctype html>
 
     .mode-card p {
       margin: 0;
-      color: #344054;
+      color: #667085;
     }
 
     .mode-card .tag-row {
@@ -248,12 +314,14 @@ HTML_TEMPLATE = """<!doctype html>
     }
 
     .mode-summary {
-      background: rgba(255, 255, 255, 0.92);
-      border: 1px solid rgba(255, 255, 255, 0.30);
-      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.52);
+      border: 1px solid rgba(255, 255, 255, 0.72);
+      border-radius: 32px;
       padding: 16px;
       color: #344054;
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.20);
+      box-shadow: 0 24px 60px rgba(72, 76, 135, 0.12);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
     }
 
     .app {
@@ -847,10 +915,11 @@ HTML_TEMPLATE = """<!doctype html>
       isolation: isolate;
       overflow: hidden;
       background:
-        radial-gradient(circle at 20px 20px, rgba(8, 127, 115, 0.12) 1px, transparent 1.25px),
-        linear-gradient(125deg, rgba(255, 248, 234, 0.92), transparent 34%),
-        linear-gradient(230deg, rgba(217, 242, 237, 0.88), transparent 36%),
-        linear-gradient(180deg, #f9fbfa 0%, #eef7f3 48%, #fff5e5 100%);
+        radial-gradient(circle at 16% 12%, rgba(255,255,255,0.92) 0 2px, transparent 2.3px),
+        radial-gradient(circle at 86% 16%, rgba(168,207,251,0.35), transparent 25%),
+        radial-gradient(circle at 11% 80%, rgba(244,199,171,0.26), transparent 24%),
+        radial-gradient(circle at 76% 76%, rgba(216,196,255,0.28), transparent 28%),
+        linear-gradient(135deg, #fdfdfd 0%, #f3f1f8 48%, #ebf4f5 100%);
       background-size: 88px 88px, auto, auto, auto;
     }
 
@@ -861,9 +930,9 @@ HTML_TEMPLATE = """<!doctype html>
       pointer-events: none;
       z-index: -1;
       background:
-        linear-gradient(115deg, transparent 0 36%, rgba(8, 127, 115, 0.10) 36.2% 36.5%, transparent 36.7%),
-        linear-gradient(22deg, transparent 0 62%, rgba(185, 121, 24, 0.12) 62.2% 62.5%, transparent 62.8%),
-        linear-gradient(160deg, transparent 0 72%, rgba(212, 93, 67, 0.08) 72.2% 72.45%, transparent 72.7%);
+        linear-gradient(115deg, transparent 0 36%, rgba(137, 126, 214, 0.13) 36.2% 36.45%, transparent 36.8%),
+        linear-gradient(22deg, transparent 0 62%, rgba(244, 199, 171, 0.18) 62.2% 62.45%, transparent 62.8%),
+        linear-gradient(160deg, transparent 0 72%, rgba(168, 207, 251, 0.14) 72.2% 72.45%, transparent 72.7%);
       opacity: 0.85;
     }
 
@@ -874,11 +943,12 @@ HTML_TEMPLATE = """<!doctype html>
       overflow: auto;
       padding: 18px;
       background:
-        radial-gradient(circle at 18px 24px, rgba(255, 255, 255, 0.62) 1px, transparent 1.25px),
-        linear-gradient(180deg, rgba(16, 55, 51, 0.96), rgba(12, 95, 85, 0.92) 42%, rgba(255, 248, 234, 0.94) 100%);
+        radial-gradient(circle at 24% 10%, rgba(255,255,255,0.70) 0 2px, transparent 2.3px),
+        radial-gradient(circle at 84% 20%, rgba(168,207,251,0.50), transparent 30%),
+        linear-gradient(180deg, rgba(35,31,99,0.94), rgba(100,88,190,0.78) 44%, rgba(255,255,255,0.42) 100%);
       background-size: 82px 82px, auto;
-      border-right: 1px solid rgba(215, 225, 228, 0.9);
-      box-shadow: 12px 0 32px rgba(31, 45, 48, 0.14);
+      border-right: 1px solid rgba(255, 255, 255, 0.58);
+      box-shadow: 18px 0 42px rgba(72, 76, 135, 0.16);
       color: #ffffff;
     }
 
@@ -888,12 +958,14 @@ HTML_TEMPLATE = """<!doctype html>
     }
 
     .user-rail .brand {
-      border: 1px solid rgba(255,255,255,0.20);
-      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.34);
+      border-radius: 28px;
       background:
-        linear-gradient(135deg, rgba(255,255,255,0.16), rgba(255,255,255,0.06));
-      box-shadow: 0 16px 34px rgba(0,0,0,0.14);
+        linear-gradient(135deg, rgba(255,255,255,0.24), rgba(255,255,255,0.08));
+      box-shadow: 0 18px 42px rgba(31,35,92,0.18);
       margin-bottom: 12px;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
     }
 
     .user-rail .brand p,
@@ -903,10 +975,12 @@ HTML_TEMPLATE = """<!doctype html>
     }
 
     .user-rail .panel {
-      background: rgba(255,255,255,0.93);
+      background: rgba(255,255,255,0.68);
       color: var(--ink);
-      border-color: rgba(255,255,255,0.30);
-      box-shadow: 0 18px 38px rgba(0,0,0,0.16);
+      border-color: rgba(255,255,255,0.66);
+      box-shadow: 0 18px 42px rgba(72,76,135,0.14);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
     }
 
     .user-rail .panel .muted,
@@ -915,19 +989,21 @@ HTML_TEMPLATE = """<!doctype html>
     }
 
     .user-star-head {
-      border: 1px solid rgba(255, 255, 255, 0.24);
-      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.66);
+      border-radius: 32px;
       background:
-        radial-gradient(circle at 18px 22px, rgba(255,255,255,0.22) 1px, transparent 1.3px),
-        linear-gradient(120deg, transparent 0 44%, rgba(255,255,255,0.10) 44.2% 44.5%, transparent 44.7%),
-        linear-gradient(145deg, #14282d 0%, #0b5c53 48%, #865126 100%);
+        radial-gradient(circle at 82% 18%, rgba(168,207,251,0.45), transparent 24%),
+        radial-gradient(circle at 14% 82%, rgba(244,199,171,0.32), transparent 26%),
+        linear-gradient(135deg, rgba(35,31,99,0.92), rgba(107,91,210,0.78) 54%, rgba(255,255,255,0.35));
       background-size: 88px 88px, auto, auto;
       color: #ffffff;
-      padding: 20px;
+      padding: 24px;
       margin-bottom: 14px;
-      box-shadow: 0 24px 58px rgba(24, 34, 48, 0.22);
+      box-shadow: 0 26px 64px rgba(72, 76, 135, 0.20);
       overflow: hidden;
       position: relative;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
     }
 
     .user-star-head::after {
@@ -954,11 +1030,11 @@ HTML_TEMPLATE = """<!doctype html>
 
     .user-tab-button,
     .planet-mode-button {
-      border: 1px solid rgba(255, 255, 255, 0.28);
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.46);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.18);
       color: #ffffff;
-      padding: 9px 10px;
+      padding: 10px 12px;
       min-height: 38px;
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
     }
@@ -979,15 +1055,17 @@ HTML_TEMPLATE = """<!doctype html>
     }
 
     .planet-mode-row .planet-mode-button {
-      border-color: rgba(207, 222, 219, 0.92);
-      background: rgba(255,255,255,0.88);
+      border-color: rgba(255,255,255,0.74);
+      background: rgba(255,255,255,0.70);
       color: var(--ink);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
     }
 
     .planet-mode-row .planet-mode-button.active {
-      background: linear-gradient(135deg, var(--accent), #0a6d8f 70%, #b97918);
+      background: linear-gradient(135deg, #231f63, #8aa8ff 70%, #efb28d);
       color: #ffffff;
-      border-color: var(--accent);
+      border-color: rgba(255,255,255,0.72);
     }
 
     .user-pane[hidden] {
@@ -995,16 +1073,19 @@ HTML_TEMPLATE = """<!doctype html>
     }
 
     .cosmic-panel {
-      border: 1px solid rgba(201, 216, 212, 0.92);
-      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.72);
+      border-radius: 28px;
       background:
-        radial-gradient(circle at 18px 18px, rgba(8, 127, 115, 0.11) 1px, transparent 1.25px),
-        linear-gradient(145deg, rgba(255,255,255,0.96), rgba(239,248,244,0.88) 62%, rgba(255,248,234,0.82));
+        radial-gradient(circle at 85% 18%, rgba(168,207,251,0.32), transparent 28%),
+        radial-gradient(circle at 12% 82%, rgba(244,199,171,0.22), transparent 30%),
+        linear-gradient(145deg, rgba(255,255,255,0.78), rgba(255,255,255,0.46));
       background-size: 96px 86px, auto;
-      box-shadow: var(--shadow);
+      box-shadow: 0 22px 54px rgba(72,76,135,0.12);
       padding: 16px;
       position: relative;
       overflow: hidden;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
     }
 
     .cosmic-panel::before {
@@ -1013,8 +1094,8 @@ HTML_TEMPLATE = """<!doctype html>
       inset: 0;
       pointer-events: none;
       background-image:
-        linear-gradient(118deg, transparent 0 50%, rgba(8,127,115,0.08) 50.2% 50.5%, transparent 50.8%),
-        linear-gradient(22deg, transparent 0 68%, rgba(185,121,24,0.10) 68.2% 68.5%, transparent 68.8%);
+        linear-gradient(118deg, transparent 0 50%, rgba(137,126,214,0.10) 50.2% 50.5%, transparent 50.8%),
+        linear-gradient(22deg, transparent 0 68%, rgba(244,199,171,0.14) 68.2% 68.5%, transparent 68.8%);
       background-size: auto;
       opacity: 0.9;
     }
@@ -2589,11 +2670,14 @@ HTML_TEMPLATE = """<!doctype html>
 </head>
 <body>
   <section id="modeChooser" class="mode-shell">
+    <div class="galaxy-orb blue"></div>
+    <div class="galaxy-orb gold"></div>
+    <div class="galaxy-orb dark"></div>
     <div class="mode-inner">
       <div class="mode-hero">
         <div>
           <h1>SOUL<br><span>GALAXY</span></h1>
-          <p>移动端 H5 版校园社交星球舱。后台看技术链路，学生视角像 App 一样从画像、雷达、聊天和首约慢慢推进。</p>
+          <p>把校园匹配做成一座会呼吸的星系：学生视角像 App，管理员视角看技术链路、知识图谱、RAG 检索和匹配理由。</p>
         </div>
         <div id="modeSummary" class="mode-summary"></div>
       </div>
