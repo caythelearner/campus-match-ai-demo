@@ -2542,79 +2542,146 @@ HTML_TEMPLATE = """<!doctype html>
       min-height: 100vh;
       margin: 0 auto;
       position: relative;
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+      overscroll-behavior-y: contain;
+      -webkit-overflow-scrolling: touch;
       border-left: 1px solid rgba(255,255,255,0.72);
       border-right: 1px solid rgba(255,255,255,0.72);
     }
 
     #userApp .user-rail {
-      position: relative;
+      position: sticky;
+      top: 0;
+      z-index: 70;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(128px, 158px);
+      gap: 8px;
+      align-items: center;
       height: auto;
       overflow: visible;
-      padding: 18px 16px 10px;
+      padding: 10px 12px 8px;
       border-right: 0;
       border-bottom: 1px solid rgba(255,255,255,0.62);
       box-shadow: none;
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
     }
 
     #userApp .user-rail::before {
-      content: "9:41";
-      display: block;
-      width: max-content;
-      margin: 0 0 10px;
-      padding: 3px 10px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.62);
-      color: var(--u-ink);
-      font-size: 12px;
-      font-weight: 800;
-      box-shadow: var(--u-shadow-soft);
+      display: none;
     }
 
     #userApp .user-rail .brand {
-      margin-bottom: 10px;
-      padding: 16px;
+      min-height: 56px;
+      margin: 0;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
 
     #userApp .user-rail .brand h1 {
-      font-size: 24px;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    #userApp .user-rail .brand p {
+      display: none;
     }
 
     #userApp .search-wrap {
-      padding: 8px 0;
+      padding: 0;
       border: 0;
     }
 
+    #userApp .search-wrap select {
+      height: 42px;
+      min-height: 42px;
+      padding: 0 12px;
+      font-size: 12px;
+    }
+
     #userApp #experienceProfile {
-      max-height: 252px;
-      overflow: auto;
+      grid-column: 1 / -1;
+      max-height: none;
+      overflow: hidden;
+      padding: 8px 10px;
+      border-radius: 22px;
+    }
+
+    #userApp #experienceProfile .profile-media {
+      grid-template-columns: 42px 1fr !important;
+      gap: 8px;
+      margin: 0;
+      align-items: center;
+    }
+
+    #userApp #experienceProfile .profile-media img {
+      width: 42px !important;
+      height: 42px !important;
+      border-radius: 16px;
+    }
+
+    #userApp #experienceProfile .profile-media h3 {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.15;
+    }
+
+    #userApp #experienceProfile .profile-media p {
+      margin: 2px 0 0;
+      font-size: 11px;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #userApp #experienceProfile .profile-media p + p,
+    #userApp #experienceProfile > .copy,
+    #userApp #experienceProfile > .tag-row,
+    #userApp #experienceProfile > .kv {
+      display: none;
     }
 
     #userApp .user-rail .top-actions {
-      justify-content: flex-start !important;
-      gap: 7px;
+      grid-column: 1 / -1;
+      display: grid !important;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      justify-content: stretch !important;
+      gap: 6px;
+      margin-top: 0 !important;
     }
 
     #userApp .user-rail .top-actions .tab-button {
-      min-height: 34px;
-      padding: 7px 10px;
-      font-size: 12px;
+      min-height: 30px;
+      padding: 6px 7px;
+      font-size: 11px;
     }
 
     #userApp .user-main {
       min-width: 0;
-      padding: 14px 14px calc(92px + env(safe-area-inset-bottom));
+      padding: 10px 12px calc(88px + env(safe-area-inset-bottom));
       height: auto;
       overflow: visible;
     }
 
     #userApp .user-star-head {
-      margin-bottom: 12px;
-      padding: 18px;
+      margin-bottom: 8px;
+      padding: 12px 14px;
+      border-radius: 24px;
     }
 
     #userApp .user-star-head h2 {
-      font-size: 24px;
+      font-size: 22px;
+      line-height: 1.05;
+    }
+
+    #userApp .user-star-head p {
+      margin-top: 4px;
+      font-size: 12px;
     }
 
     #userApp .user-nav {
@@ -2673,16 +2740,26 @@ HTML_TEMPLATE = """<!doctype html>
 
     #userApp .metrics {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       overflow-x: auto;
       scroll-snap-type: x mandatory;
-      margin-bottom: 12px;
+      margin-bottom: 8px;
     }
 
     #userApp .metric {
-      flex: 0 0 132px;
-      min-height: 82px;
+      flex: 0 0 112px;
+      min-height: 64px;
+      padding: 10px 11px;
       scroll-snap-align: start;
+    }
+
+    #userApp .metric span {
+      font-size: 11px;
+    }
+
+    #userApp .metric strong {
+      margin-top: 4px;
+      font-size: 18px;
     }
 
     #userApp .profile-grid,
@@ -2720,18 +2797,36 @@ HTML_TEMPLATE = """<!doctype html>
     }
 
     #userApp .day-pill {
-      flex: 0 0 62px;
+      flex: 0 0 54px;
+      min-height: 46px;
+      padding: 7px 6px;
       scroll-snap-align: start;
     }
 
     #userApp .action-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 9px;
+      gap: 8px;
     }
 
     #userApp .action-button {
-      min-height: 92px;
+      min-height: 76px;
+      padding: 10px;
+    }
+
+    #userApp .action-context {
+      margin-top: 10px;
+      padding: 9px 10px;
+      border-radius: 20px;
+    }
+
+    #userApp .action-context span {
+      display: none;
+    }
+
+    #userApp .cosmic-panel {
+      padding: 12px;
+      border-radius: 24px;
     }
 
     #userApp .experience-input,
@@ -2760,6 +2855,7 @@ HTML_TEMPLATE = """<!doctype html>
       }
 
       #userApp {
+        overflow: hidden;
         height: calc(100vh - 36px);
         min-height: 720px;
         margin: 18px auto;
@@ -2768,7 +2864,7 @@ HTML_TEMPLATE = """<!doctype html>
       }
 
       #userApp .user-main {
-        height: calc(100% - 352px);
+        height: calc(100% - 190px);
         overflow-y: auto;
         scrollbar-width: thin;
       }
