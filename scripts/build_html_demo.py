@@ -1268,6 +1268,10 @@ HTML_TEMPLATE = """<!doctype html>
       margin-top: 12px;
     }
 
+    .mobile-intent-tree {
+      display: none;
+    }
+
     .message-input {
       display: grid;
       grid-template-columns: 1fr auto;
@@ -2568,6 +2572,114 @@ HTML_TEMPLATE = """<!doctype html>
         display: none;
       }
 
+      .radar-visual-grid .info-grid {
+        display: none;
+      }
+
+      .mobile-intent-tree {
+        display: grid;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .intent-tree-row {
+        border-radius: 18px;
+        padding: 10px 12px;
+        background: rgba(236,232,255,0.72);
+      }
+
+      .intent-tree-row.inferred {
+        background: rgba(255,247,223,0.78);
+      }
+
+      .intent-tree-row strong {
+        display: block;
+        color: #17124a;
+        font-size: 12px;
+        margin-bottom: 3px;
+      }
+
+      .mobile-match-card {
+        min-height: 420px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        border-radius: 34px;
+        background:
+          radial-gradient(circle at 82% 12%, rgba(168,207,251,0.42), transparent 30%),
+          radial-gradient(circle at 10% 88%, rgba(244,199,171,0.32), transparent 32%),
+          rgba(255,255,255,0.64);
+      }
+
+      .mobile-match-card .card-head {
+        align-items: center;
+      }
+
+      .mobile-match-card .card-head img {
+        width: 72px;
+        height: 72px;
+        border-radius: 28px;
+      }
+
+      .swipe-actions {
+        display: grid;
+        grid-template-columns: 70px 1fr;
+        gap: 12px;
+        margin-top: 16px;
+        position: sticky;
+        bottom: calc(88px + env(safe-area-inset-bottom));
+        z-index: 25;
+      }
+
+      .swipe-actions .tab-button {
+        min-height: 58px;
+        border-radius: 999px;
+        font-weight: 800;
+      }
+
+      .swipe-actions .reject-button {
+        background: rgba(255,255,255,0.76);
+        color: #817899;
+      }
+
+      .lightning-hero {
+        border-radius: 32px;
+        padding: 18px;
+        background:
+          radial-gradient(circle at 82% 14%, rgba(168,207,251,0.42), transparent 30%),
+          linear-gradient(135deg, rgba(236,232,255,0.84), rgba(255,247,223,0.72));
+      }
+
+      .lightning-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .lightning-person {
+        min-height: 0;
+        padding: 12px;
+      }
+
+      .lightning-person .card-head {
+        grid-template-columns: 52px 1fr auto;
+      }
+
+      .lightning-person .card-head img {
+        width: 52px;
+        height: 52px;
+        border-radius: 20px;
+      }
+
+      .mobile-join-button {
+        width: 100%;
+        min-height: 48px;
+        margin-top: 12px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #7c8cf6, #6d5df6);
+        color: #ffffff;
+        font-weight: 800;
+      }
+
       .retrieval-card,
       .poster-wall .card {
         border-radius: 26px;
@@ -3143,12 +3255,22 @@ HTML_TEMPLATE = """<!doctype html>
     function renderIntentSummary(trace) {
       if (!trace) return `<div class="empty">输入一句需求后，这里展示意图拆解。</div>`;
       const intent = trace.intent || trace;
+      const explicit = intent.explicit_intents || [];
+      const inferred = intent.inferred_intents || [];
+      const hard = intent.hard_constraints || [];
+      const retrievers = trace.retrievers || [];
       return `
         <div class="info-grid">
-          <div class="info-item"><span>显性意图</span><strong>${escapeHtml((intent.explicit_intents || []).join("、") || "无")}</strong></div>
-          <div class="info-item"><span>隐性意图</span><strong>${escapeHtml((intent.inferred_intents || []).join("、") || "无")}</strong></div>
-          <div class="info-item"><span>硬条件</span><strong>${escapeHtml((intent.hard_constraints || []).join("、") || "无")}</strong></div>
-          <div class="info-item"><span>检索链路</span><strong>${escapeHtml((trace.retrievers || []).join(" + ") || "Text-to-Graph")}</strong></div>
+          <div class="info-item"><span>显性意图</span><strong>${escapeHtml(explicit.join("、") || "无")}</strong></div>
+          <div class="info-item"><span>隐性意图</span><strong>${escapeHtml(inferred.join("、") || "无")}</strong></div>
+          <div class="info-item"><span>硬条件</span><strong>${escapeHtml(hard.join("、") || "无")}</strong></div>
+          <div class="info-item"><span>检索链路</span><strong>${escapeHtml(retrievers.join(" + ") || "Text-to-Graph")}</strong></div>
+        </div>
+        <div class="mobile-intent-tree">
+          <div class="intent-tree-row"><strong>你直接说出的需求</strong>${escapeHtml(explicit.join("、") || "还没有显性条件")}</div>
+          <div class="intent-tree-row inferred"><strong>AI 推断出的偏好</strong>${escapeHtml(inferred.join("、") || "等待更多输入")}</div>
+          <div class="intent-tree-row"><strong>硬条件过滤</strong>${escapeHtml(hard.join("、") || "不额外限制")}</div>
+          <div class="intent-tree-row inferred"><strong>检索方法</strong>${escapeHtml(retrievers.join(" + ") || "Text-to-Graph + 向量检索")}</div>
         </div>
         ${(intent.warnings || []).length ? `<p class="copy"><strong>注意：</strong>${escapeHtml(intent.warnings.join("；"))}</p>` : ""}
       `;
@@ -5086,7 +5208,7 @@ HTML_TEMPLATE = """<!doctype html>
         const sceneLocked = isActionLocked("scene", scene ? scene.request_id : "default") || state.experienceComplete;
         container.innerHTML = `
           <div class="two-col">
-            <div class="panel">
+            <div class="panel lightning-hero">
               <div class="section-head">
                 <h3>闪电搭子</h3>
 	                <span class="tag">附近 / 现在</span>
@@ -5097,15 +5219,15 @@ HTML_TEMPLATE = """<!doctype html>
                 <span>地点</span><strong>${escapeHtml(scene && scene.location ? scene.location.name : "校内公共区域")}</strong>
 	                <span>地点安全</span><strong class="risk-${escapeHtml(scene && scene.safety_context ? scene.safety_context.risk_level : "low")}">${escapeHtml(scene && scene.safety_context ? scene.safety_context.risk_level : "low")}</strong>
               </div>
-	              <button class="tab-button active ${sceneLocked ? "locked" : ""}" id="joinSceneChat" style="margin-top:10px" ${sceneLocked ? "disabled" : ""}>${sceneLocked ? "已加入" : "加入这个局"}</button>
+	              <button class="tab-button active mobile-join-button ${sceneLocked ? "locked" : ""}" id="joinSceneChat" ${sceneLocked ? "disabled" : ""}>${sceneLocked ? "已加入" : "加入这个局"}</button>
             </div>
             <div class="panel">
 	              <h3>可能合适的人</h3>
-              <div class="cards">
+              <div class="cards lightning-list">
                 ${sceneRows.slice(0, 3).map((row) => {
                   const candidate = byId[row.candidate_id] || {};
                   return `
-                    <article class="card">
+                    <article class="card lightning-person">
                       <div class="card-head">
                         <img src="${imagePath(candidate.user_id)}" alt="${escapeHtml(candidate.display_name)}" onerror="this.style.visibility='hidden'">
                         <div>
@@ -5151,7 +5273,7 @@ HTML_TEMPLATE = """<!doctype html>
       const labLocked = isActionLocked("lab", candidate.user_id || "none") || state.experienceComplete;
       container.innerHTML = `
         <div class="two-col">
-          <div class="panel">
+          <div class="panel mobile-match-card">
             <div class="section-head">
               <h3>心动星球</h3>
 	              <span class="tag">慢慢了解</span>
@@ -5167,9 +5289,9 @@ HTML_TEMPLATE = """<!doctype html>
               </div>
               <p class="copy">${escapeHtml(exp.reason || "你们有共同兴趣和相近的相处期待。")}</p>
               ${tags(best.common_interests || [])}
-              <div class="top-actions" style="justify-content:flex-start;margin-top:10px">
-                <button id="heartSwipe" class="tab-button active ${heartLocked ? "locked" : ""}" ${heartLocked ? "disabled" : ""}>${heartLocked ? "已心动" : "右划心动"}</button>
-                <button id="openLab" class="tab-button ${labLocked ? "locked" : ""}" ${labLocked ? "disabled" : ""}>${labLocked ? "已开启破冰" : "进入共鸣实验室"}</button>
+              <div class="top-actions swipe-actions">
+                <button id="skipMatch" class="tab-button reject-button" ${state.experienceComplete ? "disabled" : ""}>X</button>
+                <button id="heartSwipe" class="tab-button active ${heartLocked || labLocked ? "locked" : ""}" ${heartLocked || labLocked ? "disabled" : ""}>${heartLocked || labLocked ? "已进入共鸣" : "心动 / 进入共鸣"}</button>
               </div>
             ` : `<div class="empty">暂无心动推荐</div>`}
           </div>
@@ -5180,6 +5302,15 @@ HTML_TEMPLATE = """<!doctype html>
           </div>
         </div>
       `;
+      const skip = document.getElementById("skipMatch");
+      if (skip) {
+        skip.addEventListener("click", () => {
+          if (state.experienceComplete) return;
+          state.chatMessages.push({from: "ai", speaker: "星球小助手", text: "已先跳过这位同学。你可以去雷达里按条件找人，或者切到闪电搭子找一个即时局。"});
+          state.selectedAction = "match";
+          renderUserExperience();
+        });
+      }
       const heart = document.getElementById("heartSwipe");
       if (heart) {
         heart.addEventListener("click", () => {
@@ -5188,8 +5319,10 @@ HTML_TEMPLATE = """<!doctype html>
           if (candidate.user_id) state.conversationUserId = candidate.user_id;
           state.dayTouched = true;
           lockAction("heart", candidate.user_id || "none");
+          lockAction("lab", candidate.user_id || "none");
+          state.userTab = "messages";
           state.experienceHeat = Math.max(0.1, Math.min(0.98, state.experienceHeat + 0.04));
-	          state.chatMessages.push({from: "ai", speaker: "星球小助手", text: `已帮你把 ${candidate.display_name || "对方"} 放进心动列表。等对方也确认，就可以开始破冰。`});
+	          state.chatMessages.push({from: "ai", speaker: "破冰小助手", text: ((exp.ice_breakers || [])[0]) || `已帮你和 ${candidate.display_name || "对方"} 打开共鸣实验室。先从一个轻松问题开始：如果周六下午完全自由，你最想怎么过？`});
           renderUserExperience();
         });
       }
