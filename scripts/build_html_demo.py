@@ -81,7 +81,7 @@ HTML_TEMPLATE = """<!doctype html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>搭个蛋 AI 星球舱</title>
+  <title>搭个蛋</title>
   <style>
     :root {
       --bg: #f5f8f6;
@@ -3500,10 +3500,9 @@ HTML_TEMPLATE = """<!doctype html>
     <main class="user-main">
       <header class="user-star-head">
         <div>
-	          <h2>搭个蛋 AI 星球舱</h2>
+	          <h2>今日星球</h2>
           <p id="experienceStatus"></p>
         </div>
-        <nav id="userTabs" class="user-nav" aria-label="User demo sections"></nav>
       </header>
       <section id="planetPane" class="user-pane">
         <section id="experienceMetrics" class="metrics"></section>
@@ -3544,6 +3543,7 @@ HTML_TEMPLATE = """<!doctype html>
         </div>
       </section>
       <section id="archivePane" class="user-pane" hidden></section>
+      <nav id="userTabs" class="user-nav" aria-label="User demo sections"></nav>
     </main>
   </div>
   <script>
