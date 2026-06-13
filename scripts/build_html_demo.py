@@ -1611,6 +1611,8 @@ HTML_TEMPLATE = """<!doctype html>
         radial-gradient(circle at 16px 16px, rgba(8,127,115,0.08) 1px, transparent 1.2px),
         linear-gradient(180deg, rgba(255,255,255,0.94), rgba(239,248,244,0.88));
       background-size: 82px 82px, auto;
+      touch-action: none;
+      user-select: none;
     }
 
     .neo-map-note {
@@ -1620,6 +1622,23 @@ HTML_TEMPLATE = """<!doctype html>
       color: #344054;
       padding: 10px 12px;
       margin-bottom: 10px;
+    }
+
+    .neo-drag-hint {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 12px;
+      margin: 8px 0 10px;
+    }
+
+    .neo-drag-hint span {
+      border: 1px solid rgba(207, 222, 219, 0.82);
+      border-radius: 999px;
+      padding: 4px 9px;
+      background: rgba(255,255,255,0.72);
     }
 
     .neo-focus-grid {
@@ -1689,6 +1708,14 @@ HTML_TEMPLATE = """<!doctype html>
     .neo-clickable {
       cursor: pointer;
       outline: none;
+    }
+
+    .neo-clickable.dragging {
+      cursor: grabbing;
+    }
+
+    .neo-clickable circle {
+      cursor: grab;
     }
 
     .neo-clickable circle,
@@ -2477,6 +2504,253 @@ HTML_TEMPLATE = """<!doctype html>
     #userApp .message.latest-feedback {
       outline: 2px solid rgba(109,93,246,0.20);
       box-shadow: 0 12px 24px rgba(109,93,246,0.14);
+    }
+
+    #userApp {
+      display: block;
+      width: min(100%, 430px);
+      min-height: 100vh;
+      margin: 0 auto;
+      position: relative;
+      overflow: hidden;
+      border-left: 1px solid rgba(255,255,255,0.72);
+      border-right: 1px solid rgba(255,255,255,0.72);
+    }
+
+    #userApp .user-rail {
+      position: relative;
+      height: auto;
+      overflow: visible;
+      padding: 18px 16px 10px;
+      border-right: 0;
+      border-bottom: 1px solid rgba(255,255,255,0.62);
+      box-shadow: none;
+    }
+
+    #userApp .user-rail::before {
+      content: "9:41";
+      display: block;
+      width: max-content;
+      margin: 0 0 10px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.62);
+      color: var(--u-ink);
+      font-size: 12px;
+      font-weight: 800;
+      box-shadow: var(--u-shadow-soft);
+    }
+
+    #userApp .user-rail .brand {
+      margin-bottom: 10px;
+      padding: 16px;
+    }
+
+    #userApp .user-rail .brand h1 {
+      font-size: 24px;
+    }
+
+    #userApp .search-wrap {
+      padding: 8px 0;
+      border: 0;
+    }
+
+    #userApp #experienceProfile {
+      max-height: 252px;
+      overflow: auto;
+    }
+
+    #userApp .user-rail .top-actions {
+      justify-content: flex-start !important;
+      gap: 7px;
+    }
+
+    #userApp .user-rail .top-actions .tab-button {
+      min-height: 34px;
+      padding: 7px 10px;
+      font-size: 12px;
+    }
+
+    #userApp .user-main {
+      min-width: 0;
+      padding: 14px 14px calc(92px + env(safe-area-inset-bottom));
+      height: auto;
+      overflow: visible;
+    }
+
+    #userApp .user-star-head {
+      margin-bottom: 12px;
+      padding: 18px;
+    }
+
+    #userApp .user-star-head h2 {
+      font-size: 24px;
+    }
+
+    #userApp .user-nav {
+      position: fixed;
+      left: 50%;
+      bottom: 0;
+      z-index: 80;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+      width: min(100%, 430px);
+      transform: translateX(-50%);
+      margin: 0;
+      padding: 9px 12px calc(9px + env(safe-area-inset-bottom));
+      border-top: 1px solid rgba(255,255,255,0.82);
+      background: rgba(255,255,255,0.70);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      box-shadow: 0 -12px 30px rgba(84, 74, 132, 0.14);
+    }
+
+    #userApp .user-tab-button {
+      min-height: 54px;
+      padding: 6px 4px;
+      color: #77718f;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+      font-size: 11px;
+      display: grid;
+      gap: 2px;
+      place-items: center;
+    }
+
+    #userApp .user-tab-button::before {
+      content: attr(data-icon);
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: rgba(236,232,255,0.75);
+      color: #5b50d8;
+      font-size: 14px;
+    }
+
+    #userApp .user-tab-button.active {
+      color: var(--u-ink);
+    }
+
+    #userApp .user-tab-button.active::before {
+      background: linear-gradient(135deg, var(--u-blue), var(--u-violet), var(--u-peach));
+      color: #ffffff;
+      box-shadow: 0 10px 18px rgba(124, 140, 246, 0.28);
+    }
+
+    #userApp .metrics {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      margin-bottom: 12px;
+    }
+
+    #userApp .metric {
+      flex: 0 0 132px;
+      min-height: 82px;
+      scroll-snap-align: start;
+    }
+
+    #userApp .profile-grid,
+    #userApp .two-col,
+    #userApp .archive-grid,
+    #userApp .scene-layout,
+    #userApp .radar-visual-grid,
+    #userApp .neo-detail-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    #userApp .cards,
+    #userApp .poster-wall {
+      grid-template-columns: 1fr;
+    }
+
+    #userApp .day-strip,
+    #userApp .planet-mode-row,
+    #userApp .tag-row,
+    #userApp .quick-replies {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+
+    #userApp .day-strip::-webkit-scrollbar,
+    #userApp .planet-mode-row::-webkit-scrollbar,
+    #userApp .tag-row::-webkit-scrollbar,
+    #userApp .quick-replies::-webkit-scrollbar,
+    #userApp .metrics::-webkit-scrollbar {
+      display: none;
+    }
+
+    #userApp .day-pill {
+      flex: 0 0 62px;
+      scroll-snap-align: start;
+    }
+
+    #userApp .action-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px;
+    }
+
+    #userApp .action-button {
+      min-height: 92px;
+    }
+
+    #userApp .experience-input,
+    #userApp .message-input {
+      grid-template-columns: 1fr auto;
+    }
+
+    #userApp #messagesPane .message-input {
+      position: sticky;
+      bottom: calc(74px + env(safe-area-inset-bottom));
+      z-index: 35;
+      padding: 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.70);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      box-shadow: var(--u-shadow);
+    }
+
+    @media (min-width: 761px) {
+      body:has(#userApp:not([hidden])) {
+        background:
+          radial-gradient(circle at 20% 12%, rgba(168,207,251,0.24), transparent 24%),
+          radial-gradient(circle at 80% 80%, rgba(244,199,171,0.20), transparent 24%),
+          #eef0f7;
+      }
+
+      #userApp {
+        height: calc(100vh - 36px);
+        min-height: 720px;
+        margin: 18px auto;
+        border-radius: 38px;
+        box-shadow: 0 32px 88px rgba(35, 31, 99, 0.24);
+      }
+
+      #userApp .user-main {
+        height: calc(100% - 352px);
+        overflow-y: auto;
+        scrollbar-width: thin;
+      }
+
+      #userApp .user-nav {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        transform: none;
+      }
     }
 
     @media (max-width: 980px) {
@@ -4328,7 +4602,12 @@ HTML_TEMPLATE = """<!doctype html>
       }
       return `
         <div class="neo-map-note">
-          当前画的是 ${escapeHtml(graph.focusId)} 相关产品子图：推荐、搭子、聊天热度、首约安全和信用治理都能追到节点。点击任意节点可以看字段和相连关系。全量图是 ${(data.neo4jSummary && data.neo4jSummary.n_nodes) || (data.neo4jNodes || []).length} 节点 / ${(data.neo4jSummary && data.neo4jSummary.n_relationships) || (data.neo4jRelationships || []).length} 关系，见下面 CSV 和 Cypher。
+          当前画的是 ${escapeHtml(graph.focusId)} 相关产品子图：推荐、搭子、聊天热度、首约安全和信用治理都能追到节点。点击节点看字段，按住节点可以直接拖动。全量图是 ${(data.neo4jSummary && data.neo4jSummary.n_nodes) || (data.neo4jNodes || []).length} 节点 / ${(data.neo4jSummary && data.neo4jSummary.n_relationships) || (data.neo4jRelationships || []).length} 关系，见下面 CSV 和 Cypher。
+        </div>
+        <div class="neo-drag-hint">
+          <span>拖动节点重排</span>
+          <span>点击节点看属性</span>
+          <span>关系线实时跟随</span>
         </div>
         <svg class="neo4j-map" viewBox="0 0 ${width} ${height}" role="img" aria-label="Neo4j product graph">
           <defs>
@@ -4350,8 +4629,8 @@ HTML_TEMPLATE = """<!doctype html>
               const midY = (a.y + b.y) / 2;
               const label = relLabels[row.relation] || "";
               return `
-                <line class="${strong ? "neo-link-strong" : "neo-link"}" x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}"></line>
-                ${label && index < 38 ? `<text class="neo-rel-label" x="${midX.toFixed(1)}" y="${(midY - 4).toFixed(1)}" text-anchor="middle">${escapeHtml(label)}</text>` : ""}
+                <line class="${strong ? "neo-link-strong" : "neo-link"}" data-neo-edge-source="${escapeHtml(row.source_id)}" data-neo-edge-target="${escapeHtml(row.target_id)}" x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}"></line>
+                ${label && index < 38 ? `<text class="neo-rel-label" data-neo-edge-label-source="${escapeHtml(row.source_id)}" data-neo-edge-label-target="${escapeHtml(row.target_id)}" x="${midX.toFixed(1)}" y="${(midY - 4).toFixed(1)}" text-anchor="middle">${escapeHtml(label)}</text>` : ""}
               `;
             }).join("")}
           </g>
@@ -4505,7 +4784,12 @@ HTML_TEMPLATE = """<!doctype html>
 
     function attachNeo4jGraphEvents() {
       document.querySelectorAll("[data-neo-node-id]").forEach((item) => {
-        item.addEventListener("click", () => {
+        item.addEventListener("click", (event) => {
+          if (item.dataset.dragged === "1") {
+            event.preventDefault();
+            item.dataset.dragged = "0";
+            return;
+          }
           state.selectedNeo4jNodeId = item.dataset.neoNodeId;
           renderGraph();
         });
@@ -4516,6 +4800,95 @@ HTML_TEMPLATE = """<!doctype html>
             renderGraph();
           }
         });
+      });
+      attachNeo4jDragEvents();
+    }
+
+    function attachNeo4jDragEvents() {
+      const svg = document.querySelector(".neo4j-map");
+      if (!svg) return;
+      const svgPoint = (event) => {
+        const point = svg.createSVGPoint();
+        point.x = event.clientX;
+        point.y = event.clientY;
+        return point.matrixTransform(svg.getScreenCTM().inverse());
+      };
+      const updateConnectedEdges = (nodeId, x, y) => {
+        svg.querySelectorAll("[data-neo-edge-source], [data-neo-edge-target]").forEach((edge) => {
+          const source = edge.dataset.neoEdgeSource;
+          const target = edge.dataset.neoEdgeTarget;
+          if (source === nodeId) {
+            edge.setAttribute("x1", x.toFixed(1));
+            edge.setAttribute("y1", y.toFixed(1));
+          }
+          if (target === nodeId) {
+            edge.setAttribute("x2", x.toFixed(1));
+            edge.setAttribute("y2", y.toFixed(1));
+          }
+        });
+        svg.querySelectorAll("[data-neo-edge-label-source]").forEach((label) => {
+          const source = label.dataset.neoEdgeLabelSource;
+          const target = label.dataset.neoEdgeLabelTarget;
+          if (source !== nodeId && target !== nodeId) return;
+          const edge = Array.from(svg.querySelectorAll("[data-neo-edge-source]")).find((row) => row.dataset.neoEdgeSource === source && row.dataset.neoEdgeTarget === target);
+          if (!edge) return;
+          const x1 = Number(edge.getAttribute("x1")) || 0;
+          const y1 = Number(edge.getAttribute("y1")) || 0;
+          const x2 = Number(edge.getAttribute("x2")) || 0;
+          const y2 = Number(edge.getAttribute("y2")) || 0;
+          label.setAttribute("x", ((x1 + x2) / 2).toFixed(1));
+          label.setAttribute("y", ((y1 + y2) / 2 - 4).toFixed(1));
+        });
+      };
+      svg.querySelectorAll(".neo-clickable[data-neo-node-id]").forEach((group) => {
+        let drag = null;
+        group.addEventListener("pointerdown", (event) => {
+          const circle = group.querySelector("circle");
+          const text = group.querySelector("text");
+          if (!circle || !text) return;
+          event.preventDefault();
+          const point = svgPoint(event);
+          drag = {
+            circle,
+            text,
+            nodeId: group.dataset.neoNodeId,
+            startX: point.x,
+            startY: point.y,
+            nodeX: Number(circle.getAttribute("cx")) || 0,
+            nodeY: Number(circle.getAttribute("cy")) || 0,
+            moved: false
+          };
+          group.classList.add("dragging");
+          group.setPointerCapture(event.pointerId);
+        });
+        group.addEventListener("pointermove", (event) => {
+          if (!drag) return;
+          const point = svgPoint(event);
+          const dx = point.x - drag.startX;
+          const dy = point.y - drag.startY;
+          if (Math.abs(dx) + Math.abs(dy) > 2) drag.moved = true;
+          const nextX = Math.max(22, Math.min(1098, drag.nodeX + dx));
+          const nextY = Math.max(28, Math.min(492, drag.nodeY + dy));
+          const radius = Number(drag.circle.getAttribute("r")) || 13;
+          drag.circle.setAttribute("cx", nextX.toFixed(1));
+          drag.circle.setAttribute("cy", nextY.toFixed(1));
+          drag.text.setAttribute("x", nextX.toFixed(1));
+          drag.text.setAttribute("y", (nextY + radius + 13).toFixed(1));
+          updateConnectedEdges(drag.nodeId, nextX, nextY);
+        });
+        const finishDrag = (event) => {
+          if (!drag) return;
+          group.classList.remove("dragging");
+          if (drag.moved) group.dataset.dragged = "1";
+          try {
+            group.releasePointerCapture(event.pointerId);
+          } catch (error) {
+            // Pointer capture may already be released by the browser.
+          }
+          drag = null;
+        };
+        group.addEventListener("pointerup", finishDrag);
+        group.addEventListener("pointercancel", finishDrag);
       });
     }
 
