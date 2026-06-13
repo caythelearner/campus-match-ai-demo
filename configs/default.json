@@ -12,6 +12,12 @@
   },
   "generation": {
     "use_llm_profile_extraction": false,
+    "use_llm_interview_extraction": true,
+    "interview_extraction_max_users": 10,
+    "llm_interview_max_users": 10,
+    "use_llm_rag_generation": true,
+    "rag_pipeline_max_profiles": 3,
+    "llm_rag_max_traces": 10,
     "image_provider": "placeholder",
     "image_kind": "lifestyle",
     "generate_prompt_files": true

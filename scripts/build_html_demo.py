@@ -26,6 +26,18 @@ def load_csv(path: Path, fallback: Any) -> Any:
         return list(csv.DictReader(f))
 
 
+def load_jsonl(path: Path, fallback: Any) -> Any:
+    if not path.exists():
+        return fallback
+    rows = []
+    with path.open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                rows.append(json.loads(line))
+    return rows
+
+
 def js_data(payload: dict[str, Any]) -> str:
     data = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     return data.replace("</", "<\\/")
@@ -47,7 +59,12 @@ def build_payload(root: Path) -> dict[str, Any]:
         "faissAnnBenchmark": load_json(root / "outputs/faiss_ann_benchmark.json", {}),
         "intentGraphTraces": load_json(root / "outputs/intent_graph_traces.json", []),
         "hybridSearchTraces": load_json(root / "outputs/hybrid_search_traces.json", []),
+        "bm25HybridTraces": load_json(root / "outputs/bm25_hybrid_traces.json", []),
         "profileTagEvidence": load_json(root / "outputs/profile_tag_evidence.json", []),
+        "interviewExtractionTraces": load_json(root / "outputs/interview_extraction_traces.json", []),
+        "ontologyValidation": load_json(root / "outputs/ontology_validation.json", {}),
+        "ragPipelineTraces": load_json(root / "outputs/rag_pipeline_traces.json", []),
+        "realtimeChatApiTraces": load_jsonl(root / "outputs/realtime_chat_api_traces.jsonl", []),
         "graphAlgorithmTrace": load_json(root / "outputs/graph_algorithm_trace.json", {}),
         "embeddingMetadata": load_json(root / "indexes/embedding_metadata.json", {}),
         "gnnMetrics": load_json(root / "outputs/gnn_metrics.json", {}),
@@ -2125,6 +2142,19 @@ HTML_TEMPLATE = """<!doctype html>
       color: var(--ink);
     }
 
+    button.trace-row {
+      width: 100%;
+      cursor: pointer;
+      font: inherit;
+      text-align: left;
+    }
+
+    button.trace-row.active {
+      border-color: rgba(47, 100, 214, 0.7);
+      box-shadow: 0 0 0 3px rgba(47, 100, 214, 0.08);
+      background: rgba(237, 247, 243, 0.92);
+    }
+
     .trace-row span {
       color: var(--muted);
       font-size: 11px;
@@ -3573,7 +3603,8 @@ HTML_TEMPLATE = """<!doctype html>
       ["matches", "匹配推荐"],
       ["scenes", "搭子任务"],
       ["relations", "关系安全"],
-      ["graph", "技术图谱"]
+      ["graph", "技术图谱"],
+      ["api", "API Trace"]
     ];
     const featureCatalog = [
       {
@@ -3689,6 +3720,9 @@ HTML_TEMPLATE = """<!doctype html>
       experienceHistory: [],
       conversationUserId: "",
       chatMessages: [],
+      chatApiPending: false,
+      runtimeApiTraces: [],
+      selectedApiTraceId: "",
       dayChatCount: 0,
       dayTouched: false,
       actionLocks: {},
@@ -3882,6 +3916,284 @@ HTML_TEMPLATE = """<!doctype html>
       `;
     }
 
+    function renderBm25HybridTrace(trace) {
+      if (!trace) return `<div class="empty">还没有 BM25 混合检索结果。</div>`;
+      const weights = trace.weights || {};
+      const retrievers = trace.retrievers || {};
+      const fused = trace.fused_top_k || [];
+      const bm25Params = trace.bm25_params || {};
+      const renderRetriever = (label, rows) => `
+        <div class="trace-list" style="margin-top:8px">
+          <div class="trace-row">
+            <span>${escapeHtml(label)}</span>
+            <strong>${escapeHtml((rows || []).slice(0, 3).map((row) => `${row.user_id}:${row.score}`).join(" / ") || "无命中")}</strong>
+            <span>Top-K</span>
+          </div>
+        </div>
+      `;
+      return `
+        <p class="copy"><strong>Query：</strong>${escapeHtml(trace.query)}</p>
+        <div class="kv">
+          <span>分词</span><strong>${escapeHtml(trace.tokenizer)}</strong>
+          <span>BM25参数</span><strong>k1=${escapeHtml(bm25Params.k1)} / b=${escapeHtml(bm25Params.b)} / avgdl=${escapeHtml(bm25Params.avg_doc_len)}</strong>
+          <span>权重</span><strong>BM25 ${escapeHtml(weights.bm25)} / Dense ${escapeHtml(weights.dense)} / Graph ${escapeHtml(weights.graph)} / Constraint ${escapeHtml(weights.constraint)}</strong>
+          <span>编码器</span><strong>${escapeHtml(trace.query_encoder)}</strong>
+        </div>
+        ${renderRetriever("BM25", retrievers.bm25_top_k)}
+        ${renderRetriever("Dense", retrievers.dense_top_k)}
+        ${renderRetriever("Graph", retrievers.graph_top_k)}
+        <div class="trace-list" style="margin-top:8px">
+          ${fused.slice(0, 4).map((row) => `
+            <div class="trace-row">
+              <span>#${escapeHtml(row.rank)}</span>
+              <strong>${escapeHtml(row.display_name || row.user_id)}<br><span>${escapeHtml((row.matched_terms || []).join("、") || row.reason || "语义相似")}</span></strong>
+              <span>${escapeHtml(row.final_score)}</span>
+            </div>
+          `).join("")}
+        </div>
+        <p class="copy">${escapeHtml(trace.ablation_note || "")}</p>
+      `;
+    }
+
+    function renderInterviewExtractionTrace(trace) {
+      if (!trace) return `<div class="empty">还没有访谈抽取结果。</div>`;
+      const interviews = trace.raw_interview || [];
+      const triples = trace.extracted_triples || [];
+      return `
+        <p class="copy"><strong>用户：</strong>${escapeHtml(trace.display_name || trace.user_id)}</p>
+        <div class="kv">
+          <span>抽取方式</span><strong>${escapeHtml(trace.extraction_method || "unknown")}</strong>
+          <span>API调用</span><strong>${trace.llm_used ? "是" : "否"}</strong>
+          <span>模型</span><strong>${escapeHtml(trace.llm_model || "本地规则")}</strong>
+          <span>回落错误</span><strong>${escapeHtml(trace.llm_error || "无")}</strong>
+        </div>
+        <div class="trace-list">
+          ${interviews.slice(0, 3).map((row, idx) => `
+            <div class="trace-row">
+              <span>Q${idx + 1}</span>
+              <strong>${escapeHtml(row.question)}<br><span>${escapeHtml(row.answer)}</span></strong>
+              <span>${escapeHtml((row.fields || []).join("/") || "field")}</span>
+            </div>
+          `).join("")}
+        </div>
+        <div class="trace-list" style="margin-top:8px">
+          ${triples.slice(0, 5).map((triple) => `
+            <div class="trace-row">
+              <span>${escapeHtml(triple.subject)}</span>
+              <strong>${escapeHtml(triple.relation)}<br><span>${escapeHtml(triple.object)} / ${escapeHtml(triple.object_type)}</span></strong>
+              <span>${escapeHtml(triple.confidence)}</span>
+            </div>
+          `).join("")}
+        </div>
+        ${pathStrip(trace.pipeline_steps || [])}
+      `;
+    }
+
+    function renderOntologyValidation(ontology) {
+      const relationRows = Object.entries(ontology.relation_coverage || {}).slice(0, 7);
+      const violations = ontology.sample_violations || [];
+      return `
+        <div class="kv">
+          <span>校验三元组</span><strong>${escapeHtml(ontology.n_triples_checked || 0)}</strong>
+          <span>通过三元组</span><strong>${escapeHtml(ontology.n_valid_triples || 0)}</strong>
+          <span>通过率</span><strong>${escapeHtml(ontology.valid_ratio ?? "未生成")}</strong>
+          <span>违规数</span><strong>${escapeHtml(ontology.n_violations || 0)}</strong>
+        </div>
+        <p class="copy">${escapeHtml(ontology.schema_summary || "")}</p>
+        <div class="trace-list">
+          ${relationRows.map(([relation, count]) => `
+            <div class="trace-row">
+              <span>${escapeHtml(relation)}</span>
+              <strong>relation coverage<br><span>User -> ${escapeHtml(relation)}</span></strong>
+              <span>${escapeHtml(count)}</span>
+            </div>
+          `).join("")}
+          ${violations.slice(0, 2).map((row) => `
+            <div class="trace-row">
+              <span>violation</span>
+              <strong>${escapeHtml(row.reason)}<br><span>${escapeHtml(JSON.stringify(row.triple || {}))}</span></strong>
+              <span>check</span>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function renderRagPipelineTrace(trace) {
+      if (!trace) return `<div class="empty">还没有 RAG 流水线结果。</div>`;
+      const steps = trace.steps || [];
+      const stepByName = Object.fromEntries(steps.map((step) => [step.name, step.output]));
+      const rewrite = stepByName.query_rewrite || {};
+      const retrieval = stepByName.retrieval || [];
+      const compressed = stepByName.context_compression || [];
+      const verifier = stepByName.safety_verifier || {};
+      return `
+        <p class="copy"><strong>用户消息：</strong>${escapeHtml(trace.query)}</p>
+        <div class="kv">
+          <span>意图</span><strong>${escapeHtml(rewrite.intent || "unknown")}</strong>
+          <span>路由</span><strong>${escapeHtml((rewrite.route_hints || []).join(" + "))}</strong>
+          <span>压缩证据</span><strong>${escapeHtml(compressed.length)} 条</strong>
+          <span>校验</span><strong>${escapeHtml(verifier.status || "unknown")}</strong>
+          <span>生成方式</span><strong>${escapeHtml(trace.generation_method || "retrieval_template")}</strong>
+          <span>模型</span><strong>${escapeHtml(trace.llm_model || "本地模板")}</strong>
+        </div>
+        <div class="trace-list">
+          ${retrieval.slice(0, 4).map((doc) => `
+            <div class="trace-row">
+              <span>#${escapeHtml(doc.rank)}</span>
+              <strong>${escapeHtml(doc.title)}<br><span>${escapeHtml(doc.source)}</span></strong>
+              <span>${escapeHtml(doc.score)}</span>
+            </div>
+          `).join("")}
+        </div>
+        <p class="copy"><strong>最终回复：</strong>${escapeHtml(trace.final_suggestion)}</p>
+        <p class="copy"><strong>安全校验：</strong>${escapeHtml((verifier.flags || []).join("；"))}</p>
+      `;
+    }
+
+    function apiTraceRows() {
+      const interview = (data.interviewExtractionTraces || []).filter((row) => row.llm_attempted || row.llm_used).map((row) => ({
+        kind: "interview",
+        trace_id: row.trace_id,
+        user_id: row.user_id,
+        model: row.llm_model || "本地规则",
+        method: row.extraction_method || "unknown",
+        status: row.llm_error ? "error" : row.llm_used ? "ok" : "fallback",
+        summary: `${(row.extracted_entities || []).length} entities / ${(row.extracted_triples || []).length} triples`,
+        raw: row
+      }));
+      const rag = (data.ragPipelineTraces || []).filter((row) => row.llm_attempted || row.llm_used).map((row) => ({
+        kind: "rag",
+        trace_id: row.trace_id,
+        user_id: row.user_id,
+        model: row.llm_model || "本地模板",
+        method: row.generation_method || "unknown",
+        status: row.llm_error ? "error" : row.llm_used ? "ok" : "fallback",
+        summary: row.final_suggestion || "",
+        raw: row
+      }));
+      const realtime = [...(data.realtimeChatApiTraces || []), ...(state.runtimeApiTraces || [])].map((row) => ({
+        kind: "realtime",
+        trace_id: row.trace_id,
+        user_id: row.user_id,
+        model: (row.llm_config && row.llm_config.model) || row.llm_model || "实时API",
+        method: row.generation_method || "server_realtime_rag",
+        status: row.llm_error ? "error" : row.llm_used ? "ok" : "fallback",
+        summary: row.final_suggestion || row.final_reply || "",
+        raw: row
+      }));
+      return [...interview, ...rag, ...realtime];
+    }
+
+    function renderApiTraces() {
+      const rows = apiTraceRows();
+      if (!state.selectedApiTraceId && rows.length) state.selectedApiTraceId = rows[0].trace_id;
+      const selected = rows.find((row) => row.trace_id === state.selectedApiTraceId) || rows[0] || null;
+      const counts = {
+        interview: rows.filter((row) => row.kind === "interview").length,
+        rag: rows.filter((row) => row.kind === "rag").length,
+        realtime: rows.filter((row) => row.kind === "realtime").length,
+        ok: rows.filter((row) => row.status === "ok").length,
+      };
+      document.getElementById("content").innerHTML = `
+        <section class="tech-cockpit">
+          <div class="section-head">
+            <div>
+              <h3>API Trace 明细</h3>
+              <p class="muted">只展示调用证据，不展示 API key。GitHub Pages 展示静态 trace；本地 8023 服务会追加实时聊天调用。</p>
+            </div>
+            <span class="score-pill">${escapeHtml(counts.ok)}/${escapeHtml(rows.length)} ok</span>
+          </div>
+          <div class="metrics">
+            ${metric("访谈抽取API", counts.interview)}
+            ${metric("预生成RAG API", counts.rag)}
+            ${metric("实时聊天API", counts.realtime)}
+            ${metric("成功 trace", counts.ok)}
+          </div>
+        </section>
+        <div class="two-col" style="margin-top:12px">
+          <section class="panel">
+            <div class="section-head">
+              <h3>调用列表</h3>
+              <span class="muted">${escapeHtml(rows.length)} 条</span>
+            </div>
+            <div class="trace-list">
+              ${rows.map((row) => `
+                <button class="trace-row ${row.trace_id === (selected && selected.trace_id) ? "active" : ""}" data-api-trace="${escapeHtml(row.trace_id)}">
+                  <span>${escapeHtml(row.kind)}</span>
+                  <strong>${escapeHtml(row.trace_id)}<br><span>${escapeHtml(row.method)} / ${escapeHtml(row.model)}</span></strong>
+                  <span>${escapeHtml(row.status)}</span>
+                </button>
+              `).join("") || `<div class="empty">还没有 API trace。GitHub Pages 只能展示静态 trace；用本地 8023 服务发消息后，实时调用会出现在这里。</div>`}
+            </div>
+          </section>
+          <section class="panel">
+            <div class="section-head">
+              <h3>Trace 详情</h3>
+              ${selected ? statusPill(selected.status, selected.status === "ok" ? "ok" : "partial") : statusPill("未选择", "missing")}
+            </div>
+            ${selected ? renderApiTraceDetail(selected) : `<div class="empty">选择左侧一条 trace 查看详情。</div>`}
+          </section>
+        </div>
+      `;
+      document.querySelectorAll("[data-api-trace]").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.selectedApiTraceId = button.dataset.apiTrace;
+          renderApiTraces();
+        });
+      });
+    }
+
+    function renderApiTraceDetail(row) {
+      const raw = row.raw || {};
+      if (row.kind === "interview") {
+        return `
+          <div class="kv">
+            <span>用户</span><strong>${escapeHtml(raw.user_id)}</strong>
+            <span>模型</span><strong>${escapeHtml(raw.llm_model || "")}</strong>
+            <span>实体</span><strong>${escapeHtml((raw.extracted_entities || []).length)}</strong>
+            <span>三元组</span><strong>${escapeHtml((raw.extracted_triples || []).length)}</strong>
+            <span>错误</span><strong>${escapeHtml(raw.llm_error || "无")}</strong>
+          </div>
+          <div class="trace-list" style="margin-top:8px">
+            ${(raw.extracted_triples || []).slice(0, 8).map((triple) => `
+              <div class="trace-row">
+                <span>${escapeHtml(triple.subject)}</span>
+                <strong>${escapeHtml(triple.relation)}<br><span>${escapeHtml(triple.object)} / ${escapeHtml(triple.object_type)}</span></strong>
+                <span>${escapeHtml(triple.confidence)}</span>
+              </div>
+            `).join("")}
+          </div>
+        `;
+      }
+      const steps = Object.fromEntries((raw.steps || []).map((step) => [step.name, step.output]));
+      const rewrite = steps.query_rewrite || {};
+      const retrieval = steps.retrieval || raw.top_k || [];
+      const verifier = steps.safety_verifier || {};
+      return `
+        <p class="copy"><strong>用户消息：</strong>${escapeHtml(raw.query || "")}</p>
+        <div class="kv">
+          <span>用户</span><strong>${escapeHtml(raw.user_id || "")}</strong>
+          <span>候选</span><strong>${escapeHtml(raw.candidate_id || "")}</strong>
+          <span>模型</span><strong>${escapeHtml((raw.llm_config && raw.llm_config.model) || raw.llm_model || "")}</strong>
+          <span>意图</span><strong>${escapeHtml(rewrite.intent || "")}</strong>
+          <span>生成方式</span><strong>${escapeHtml(raw.generation_method || "")}</strong>
+          <span>错误</span><strong>${escapeHtml(raw.llm_error || "无")}</strong>
+        </div>
+        <div class="trace-list" style="margin-top:8px">
+          ${retrieval.slice(0, 5).map((doc) => `
+            <div class="trace-row">
+              <span>#${escapeHtml(doc.rank)}</span>
+              <strong>${escapeHtml(doc.title)}<br><span>${escapeHtml(doc.source)}</span></strong>
+              <span>${escapeHtml(doc.score)}</span>
+            </div>
+          `).join("")}
+        </div>
+        <p class="copy"><strong>最终回复：</strong>${escapeHtml(raw.final_suggestion || raw.final_reply || "")}</p>
+        <p class="copy"><strong>安全校验：</strong>${escapeHtml(verifier.status || "")} / ${escapeHtml((verifier.flags || []).join("；"))}</p>
+      `;
+    }
+
     function renderIntentSummary(trace) {
       if (!trace) return `<div class="empty">输入一句需求后，这里展示意图拆解。</div>`;
       const intent = trace.intent || trace;
@@ -4011,7 +4323,8 @@ HTML_TEMPLATE = """<!doctype html>
         matches: renderMatches,
         scenes: renderScenes,
         relations: renderRelationsSafety,
-        graph: renderGraph
+        graph: renderGraph,
+        api: renderApiTraces
       };
       renderers[state.tab]();
       const info = `生成时间 ${escapeHtml(data.generatedAt || "")} | 当前用户 ${escapeHtml(state.selectedUserId || "无")}`;
@@ -5408,7 +5721,15 @@ HTML_TEMPLATE = """<!doctype html>
       const faissAnn = data.faissAnnBenchmark || {};
       const intentTraces = data.intentGraphTraces || [];
       const hybridTraces = data.hybridSearchTraces || [];
+      const bm25Traces = data.bm25HybridTraces || [];
       const tagEvidence = data.profileTagEvidence || [];
+      const interviewTraces = data.interviewExtractionTraces || [];
+      const ontology = data.ontologyValidation || {};
+      const ragPipelineTraces = data.ragPipelineTraces || [];
+      const llmInterviewAttempts = interviewTraces.filter((row) => row.llm_attempted).length;
+      const llmInterviewCount = interviewTraces.filter((row) => row.llm_used).length;
+      const llmRagAttempts = ragPipelineTraces.filter((row) => row.llm_attempted).length;
+      const llmRagCount = ragPipelineTraces.filter((row) => row.llm_used).length;
       const firstVector = vectorTraces[0] || {};
       const graphAlgo = data.graphAlgorithmTrace || {};
       const gnn = data.gnnMetrics || {};
@@ -5432,6 +5753,16 @@ HTML_TEMPLATE = """<!doctype html>
           page: "用户档案、星图看板"
         },
         {
+          name: "访谈实体关系抽取",
+          status: interviewTraces.length ? "ok" : "missing",
+          statusText: interviewTraces.length ? `${llmInterviewAttempts}/${llmInterviewCount} API` : "未生成",
+          input: "AI 模拟访谈问答文本",
+          process: "句子切分 -> API JSON 抽取/本地回落 -> 字段归一化 -> User-Entity 三元组",
+          output: `outputs/interview_extraction_traces.json / ${interviewTraces.length} users / API ${llmInterviewAttempts} attempts`,
+          code: "src/campus_match/interview_extraction.py",
+          page: "技术证据、图谱留痕"
+        },
+        {
           name: "知识图谱 / 三元组",
           status: "ok",
           statusText: "已运行",
@@ -5440,6 +5771,16 @@ HTML_TEMPLATE = """<!doctype html>
           output: `data/triples.csv / ${summary.n_triples || 0} 条画像三元组`,
           code: "src/campus_match/kg.py",
           page: "星图看板、图谱留痕"
+        },
+        {
+          name: "Ontology 本体约束校验",
+          status: ontology.status === "ok" ? "ok" : ontology.status ? "partial" : "missing",
+          statusText: ontology.status === "ok" ? "校验通过" : ontology.status || "未生成",
+          input: "data/triples.csv + User/Interest/Value schema",
+          process: "校验 domain、range、relation 和画像字段一致性",
+          output: `outputs/ontology_validation.json / valid ratio ${ontology.valid_ratio ?? "待生成"}`,
+          code: "src/campus_match/ontology.py",
+          page: "技术证据、图谱质量"
         },
         {
           name: "文本 / 视觉向量",
@@ -5492,6 +5833,16 @@ HTML_TEMPLATE = """<!doctype html>
           page: "雷达页、技术证据"
         },
         {
+          name: "BM25 + 向量 + 图约束检索",
+          status: bm25Traces.length ? "ok" : "missing",
+          statusText: bm25Traces.length ? "已运行" : "未生成",
+          input: "自然语言 query + 画像文档 + embedding + 意图图谱",
+          process: "BM25(k1=1.5,b=0.75) + dense + graph + constraint 加权融合",
+          output: `outputs/bm25_hybrid_traces.json / ${bm25Traces.length} traces`,
+          code: "src/campus_match/bm25_hybrid.py",
+          page: "雷达页、技术证据"
+        },
+        {
           name: "画像标签证据 RAG",
           status: tagEvidence.length ? "ok" : "missing",
           statusText: tagEvidence.length ? "已运行" : "未生成",
@@ -5530,6 +5881,16 @@ HTML_TEMPLATE = """<!doctype html>
           output: `outputs/chat_vector_retrieval_trace.json / ${chatTraces.length} traces；用户输入时实时重算`,
           code: "src/campus_match/chat_retrieval.py",
           page: "用户消息页、小助手建议、技术证据"
+        },
+        {
+          name: "完整 RAG 流水线",
+          status: ragPipelineTraces.length ? "ok" : "missing",
+          statusText: ragPipelineTraces.length ? `${llmRagAttempts}/${llmRagCount} API` : "未生成",
+          input: "用户消息 + 画像上下文 + 匹配理由 + 破冰/安全知识库",
+          process: "query rewrite -> router -> retrieval -> rerank -> compression -> API answer -> verifier",
+          output: `outputs/rag_pipeline_traces.json / ${ragPipelineTraces.length} traces / API ${llmRagAttempts} attempts`,
+          code: "src/campus_match/rag_pipeline.py",
+          page: "消息页、技术证据"
         },
         {
           name: "Neo4j 图数据库留痕",
@@ -5593,7 +5954,15 @@ HTML_TEMPLATE = """<!doctype html>
       const faissAnn = data.faissAnnBenchmark || {};
       const intentTraces = data.intentGraphTraces || [];
       const hybridTraces = data.hybridSearchTraces || [];
+      const bm25Traces = data.bm25HybridTraces || [];
       const tagEvidence = data.profileTagEvidence || [];
+      const interviewTraces = data.interviewExtractionTraces || [];
+      const ontology = data.ontologyValidation || {};
+      const ragPipelineTraces = data.ragPipelineTraces || [];
+      const llmInterviewAttempts = interviewTraces.filter((row) => row.llm_attempted).length;
+      const llmInterviewCount = interviewTraces.filter((row) => row.llm_used).length;
+      const llmRagAttempts = ragPipelineTraces.filter((row) => row.llm_attempted).length;
+      const llmRagCount = ragPipelineTraces.filter((row) => row.llm_used).length;
       const graphAlgo = data.graphAlgorithmTrace || {};
       const gnn = data.gnnMetrics || {};
       const gnnRisk = data.gnnRiskMetrics || {};
@@ -5605,7 +5974,10 @@ HTML_TEMPLATE = """<!doctype html>
       const topDocs = firstTrace.top_k || [];
       const vectorHits = firstVector.top_k || [];
       const firstHybrid = hybridTraces[0] || {};
+      const firstBm25 = bm25Traces[0] || {};
       const firstEvidence = tagEvidence[0] || {};
+      const firstInterview = interviewTraces[0] || {};
+      const firstRagPipeline = ragPipelineTraces[0] || {};
       const graphPairs = graphAlgo.pair_evidence || [];
       const graphScores = graphAlgo.user_scores || [];
       const graphCommunities = graphAlgo.communities || [];
@@ -5634,8 +6006,14 @@ HTML_TEMPLATE = """<!doctype html>
           ${metric("ANN 索引对比", faissAnn.status === "ok" ? `${(faissAnn.summary || []).length} indexes` : "未生成")}
           ${metric("意图图谱 trace", intentTraces.length)}
           ${metric("混合检索 trace", hybridTraces.length)}
+          ${metric("BM25混合 trace", bm25Traces.length)}
+          ${metric("访谈抽取 trace", interviewTraces.length)}
+          ${metric("访谈API", `${llmInterviewAttempts}/${llmInterviewCount}`)}
+          ${metric("本体校验", ontology.status ? `${ontology.status} / ${ontology.valid_ratio}` : "未生成")}
           ${metric("标签证据", tagEvidence.length)}
           ${metric("聊天 RAG trace", chatTraces.length)}
+          ${metric("完整RAG trace", ragPipelineTraces.length)}
+          ${metric("RAG API", `${llmRagAttempts}/${llmRagCount}`)}
           ${metric("图算法", graphAlgo.status === "ok" ? `${graphAlgo.n_nodes || 0}/${graphAlgo.n_edges || 0}` : "未生成")}
           ${metric("GNN 链接预测", gnn.status === "trained" ? `AUC ${gnn.test_auc}` : "未训练")}
           ${metric("GCN 风险分类", gnnRisk.status === "trained" ? `AUC ${gnnRisk.test_auc}` : "未训练")}
@@ -5680,6 +6058,38 @@ HTML_TEMPLATE = """<!doctype html>
               <p class="copy"><strong>权重：</strong>向量 ${escapeHtml(firstHybrid.weights && firstHybrid.weights.vector)} / 关键词 ${escapeHtml(firstHybrid.weights && firstHybrid.weights.sparse)} / 图谱 ${escapeHtml(firstHybrid.weights && firstHybrid.weights.graph)} / 约束 ${escapeHtml(firstHybrid.weights && firstHybrid.weights.constraint)}</p>
               ${renderHybridTrace(firstHybrid)}
             ` : `<div class="empty">还没有混合检索 trace。</div>`}
+          </section>
+        </div>
+        <div class="two-col" style="margin-top:12px">
+          <section class="panel">
+            <div class="section-head">
+              <h3>BM25 + 向量 + 图约束</h3>
+              ${statusPill(firstBm25.status || "未生成", bm25Traces.length ? "ok" : "missing")}
+            </div>
+            ${bm25Traces.length ? renderBm25HybridTrace(firstBm25) : `<div class="empty">还没有 BM25 混合检索 trace。</div>`}
+          </section>
+          <section class="panel">
+            <div class="section-head">
+              <h3>完整 RAG 流水线</h3>
+              ${statusPill(firstRagPipeline.status || "未生成", ragPipelineTraces.length ? "ok" : "missing")}
+            </div>
+            ${ragPipelineTraces.length ? renderRagPipelineTrace(firstRagPipeline) : `<div class="empty">还没有 RAG 流水线 trace。</div>`}
+          </section>
+        </div>
+        <div class="two-col" style="margin-top:12px">
+          <section class="panel">
+            <div class="section-head">
+              <h3>访谈实体关系抽取</h3>
+              ${statusPill(firstInterview.status || "未生成", interviewTraces.length ? "ok" : "missing")}
+            </div>
+            ${interviewTraces.length ? renderInterviewExtractionTrace(firstInterview) : `<div class="empty">还没有访谈抽取 trace。</div>`}
+          </section>
+          <section class="panel">
+            <div class="section-head">
+              <h3>本体约束与图谱质量</h3>
+              ${statusPill(ontology.status || "未生成", ontology.status === "ok" ? "ok" : ontology.status ? "partial" : "missing")}
+            </div>
+            ${ontology.status ? renderOntologyValidation(ontology) : `<div class="empty">还没有本体校验结果。</div>`}
           </section>
         </div>
         <div class="two-col" style="margin-top:12px">
@@ -6481,13 +6891,13 @@ HTML_TEMPLATE = """<!doctype html>
       const exp = (best && best.explanation) || {};
       const iceBreakers = (exp.ice_breakers || []).slice(0, 2);
       const replies = Array.from(new Set([...iceBreakers, ...quickReplies])).slice(0, 6);
-      const chatLocked = state.experienceComplete || state.dayChatCount >= 3;
+      const chatLocked = state.experienceComplete || state.dayChatCount >= 3 || state.chatApiPending;
       const latestFeedback = latestCounterpartFeedback();
       document.getElementById("chatPanel").innerHTML = `
         <div class="panel">
           <div class="section-head">
             <h3>和 ${escapeHtml(candidate.display_name || "推荐对象")} 聊天</h3>
-	            <span class="muted">${state.experienceComplete ? "已结束，可以回看记录" : `今天还能聊 ${Math.max(0, 3 - state.dayChatCount)} 轮`}</span>
+	            <span class="muted">${state.chatApiPending ? "实时 RAG 生成中" : state.experienceComplete ? "已结束，可以回看记录" : `今天还能聊 ${Math.max(0, 3 - state.dayChatCount)} 轮`}</span>
           </div>
           ${renderLatestCounterpartFeedback(candidate)}
           <div class="chat-window">
@@ -6501,7 +6911,7 @@ HTML_TEMPLATE = """<!doctype html>
           <div class="quick-replies">
             ${replies.map((reply) => `<button class="quick-reply ${chatLocked ? "locked" : ""}" data-reply="${escapeHtml(reply)}" ${chatLocked ? "disabled" : ""}>${escapeHtml(reply)}</button>`).join("")}
           </div>
-	          ${state.dayChatCount >= 3 && !state.experienceComplete ? `<div class="completion-banner">今天先聊到这里。点“推进今天”，让关系自然进入下一天。</div>` : ""}
+          ${state.chatApiPending ? `<div class="completion-banner">正在请求本地 API 服务：检索 Top-K -> 调用模型 -> 安全校验。</div>` : state.dayChatCount >= 3 && !state.experienceComplete ? `<div class="completion-banner">今天先聊到这里。点“推进今天”，让关系自然进入下一天。</div>` : ""}
         </div>
         <div class="panel">
           <div class="section-head">
@@ -6795,7 +7205,7 @@ HTML_TEMPLATE = """<!doctype html>
       const docs = trace.top_k || [];
       return `
         <div class="completion-banner">
-          <strong>AI 建议来源：</strong>${state.lastChatRag ? "刚才这句回复由实时向量检索生成。" : "参考了预生成聊天检索 trace。"} 方法：${escapeHtml(trace.retrieval_method || "vector_top_k")}
+          <strong>AI 建议来源：</strong>${state.lastChatRag ? (trace.llm_used ? "刚才这句回复由服务端实时 RAG + API 生成。" : "刚才这句回复由实时向量检索生成。") : "参考了预生成聊天检索 trace。"} 方法：${escapeHtml(trace.retrieval_method || trace.generation_method || "vector_top_k")}
           <div class="tag-row" style="margin-top:8px">
             ${docs.slice(0, 3).map((doc) => `<span class="tag blue">#${escapeHtml(doc.rank)} ${escapeHtml(doc.title || doc.source)} ${escapeHtml(doc.score || "")}</span>`).join("")}
           </div>
@@ -6804,8 +7214,29 @@ HTML_TEMPLATE = """<!doctype html>
       `;
     }
 
-    function sendChatMessage(text) {
+    async function callServerChatRag(text, profile, candidate) {
+      const response = await fetch("/api/chat-rag", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          query: text,
+          user_id: profile.user_id,
+          candidate_id: candidate.user_id || ""
+        })
+      });
+      if (!response.ok) {
+        throw new Error(`API ${response.status}`);
+      }
+      const payload = await response.json();
+      if (!payload.ok || !payload.trace) {
+        throw new Error(payload.error || "API trace missing");
+      }
+      return payload.trace;
+    }
+
+    async function sendChatMessage(text) {
       if (state.experienceComplete) return;
+      if (state.chatApiPending) return;
       if (state.dayChatCount >= 3) {
         if (state.chatLimitNoticeDay !== state.experienceDay) {
           state.chatMessages.push({from: "ai", speaker: "星球小助手", text: "今天先聊到这里就好。点“推进今天”，明天再继续会更自然。"});
@@ -6821,14 +7252,31 @@ HTML_TEMPLATE = """<!doctype html>
       const clean = String(text || "").trim();
       if (!clean) return;
       state.chatMessages.push({from: "me", speaker: "我", text: clean});
-      state.chatMessages.push({from: "other", speaker: candidate.display_name || "对方", text: buildRagReply(clean, profile, candidate, best), feedback: true});
+      const pendingIndex = state.chatMessages.length;
+      state.chatMessages.push({from: "ai", speaker: "实时 RAG", text: "正在检索证据并调用模型生成回复..."});
+      state.chatApiPending = true;
+      document.getElementById("experienceText").value = "";
+      renderUserExperience();
+      let reply = "";
+      try {
+        const trace = await callServerChatRag(clean, profile, candidate);
+        reply = trace.final_suggestion || trace.final_reply || "我想先听听你的想法。";
+        state.lastChatRag = trace;
+        state.runtimeApiTraces = [trace, ...(state.runtimeApiTraces || [])].slice(0, 30);
+      } catch (error) {
+        reply = buildRagReply(clean, profile, candidate, best);
+        if (state.lastChatRag) {
+          state.lastChatRag.api_error = String(error && error.message || error);
+        }
+      }
+      state.chatMessages[pendingIndex] = {from: "other", speaker: candidate.display_name || "对方", text: reply, feedback: true};
       const inferred = inferTagsFromText(clean);
       state.experienceTags = Array.from(new Set([...state.experienceTags, ...inferred])).slice(0, 8);
       state.experienceHeat = Math.max(0.1, Math.min(0.98, state.experienceHeat + 0.025 + (inferred.length ? 0.01 : 0)));
       state.dayChatCount += 1;
       state.dayTouched = true;
       state.chatLimitNoticeDay = 0;
-      document.getElementById("experienceText").value = "";
+      state.chatApiPending = false;
       renderUserExperience();
     }
 
@@ -6861,12 +7309,12 @@ HTML_TEMPLATE = """<!doctype html>
       const banner = document.getElementById("completionBanner");
       const messageInput = document.getElementById("messageText");
       const messageSubmit = document.getElementById("sendMessageButton");
-      const chatLocked = state.experienceComplete || state.dayChatCount >= 3;
+      const chatLocked = state.experienceComplete || state.dayChatCount >= 3 || state.chatApiPending;
       input.disabled = state.experienceComplete;
       submit.disabled = state.experienceComplete;
       submit.classList.toggle("locked", state.experienceComplete);
       messageInput.disabled = chatLocked;
-      messageInput.placeholder = chatLocked ? "今天先聊到这里，推进到下一天后再继续" : "自己输入一句话，例如：我们周五去图书馆旁边喝咖啡吗？";
+      messageInput.placeholder = state.chatApiPending ? "实时 RAG 正在生成回复" : chatLocked ? "今天先聊到这里，推进到下一天后再继续" : "自己输入一句话，例如：我们周五去图书馆旁边喝咖啡吗？";
       messageSubmit.disabled = chatLocked;
       messageSubmit.classList.toggle("locked", chatLocked);
       banner.innerHTML = state.experienceComplete

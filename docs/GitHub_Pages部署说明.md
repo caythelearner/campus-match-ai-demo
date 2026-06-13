@@ -2,6 +2,8 @@
 
 这个项目的 `demo/index.html` 是纯静态页面，依赖的图片在 `demo/assets/` 里。因此可以直接部署到 GitHub Pages，不需要服务器、不需要 Python 环境、不需要安装依赖。
 
+注意：GitHub Pages 只能展示已经写入 HTML 的静态数据，包括预生成的 API trace、Neo4j 留痕、RAG trace 和管理员看板。用户消息框里的“服务端实时 RAG + API 调用”需要本地 Python 服务 `scripts/serve_demo_api.py`，不能在 GitHub Pages 上真正调用 API。公网静态页会自动回退到浏览器本地 RAG，不会暴露 API key。
+
 本项目已经加入 GitHub Actions 配置：
 
 ```text
@@ -74,12 +76,28 @@ git push
 
 GitHub Actions 会自动重新部署。
 
+如果要演示“用户输入后实时调用 API”，不要用 GitHub Pages 链接，而是在本地运行：
+
+```bash
+cd /data/newanyue/CampusMatchAI/campus_match_ai
+.venv-lite/bin/python scripts/serve_demo_api.py --port 8023
+```
+
+然后打开：
+
+```text
+http://localhost:8023/
+```
+
+这个本地服务会读取 `.env` 中的 API key，前端只请求 `/api/chat-rag`，不会把 key 写入 HTML。
+
 ## 4. 注意事项
 
 1. 不要只上传 `demo/index.html`，必须带上 `demo/assets/`。
 2. 当前 `demo/` 约 16M，GitHub Pages 可以承受。
-3. GitHub Pages 是静态托管，不能跑 Python、Neo4j 或本地模型。
-4. 当前页面展示的数据已经被写进 HTML 和静态资源里，所以小组伙伴只需要打开网页就能看。
+3. GitHub Pages 是静态托管，不能跑 Python、Neo4j、本地模型或服务端 API。
+4. 当前页面展示的数据已经被写进 HTML 和静态资源里，所以小组伙伴只需要打开网页就能看静态 demo。
+5. `API Trace` 页在 GitHub Pages 上展示的是已落盘的静态 trace；实时追加 trace 只在本地 8023 服务中生效。
 5. 如果仓库是 public，GitHub Free 可以用 Pages；如果是 private，需要看账号套餐是否支持 private Pages。
 
 ## 5. 常见问题

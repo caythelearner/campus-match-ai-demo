@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import json
-import os
 import hashlib
 from typing import Any
 
-import requests
-
 from .kg import ProfileGraph
+from .llm_client import call_llm_text, parse_json_response
 
 
 def build_explanation_prompt(
@@ -149,25 +147,15 @@ def build_ice_breakers(
 
 
 def llm_explanation(prompt: str) -> dict[str, Any] | None:
-    api_url = os.getenv("LLM_API_URL")
-    api_key = os.getenv("LLM_API_KEY")
-    model = os.getenv("LLM_MODEL")
-    if not api_url or not api_key or not model:
+    content = call_llm_text(
+        system="你是严格输出 JSON 的 GraphRAG 推荐解释助手。",
+        user=prompt,
+        temperature=0.2,
+        max_tokens=900,
+    )
+    if not content:
         return None
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": "你是严格输出 JSON 的 GraphRAG 推荐解释助手。"},
-            {"role": "user", "content": prompt},
-        ],
-        "temperature": 0.2,
-    }
-    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    resp = requests.post(api_url, headers=headers, json=payload, timeout=60)
-    resp.raise_for_status()
-    content = resp.json()["choices"][0]["message"]["content"].strip()
-    content = content.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    return json.loads(content)
+    return parse_json_response(content)
 
 
 def explain_matches(

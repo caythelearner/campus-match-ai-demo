@@ -96,6 +96,16 @@ export LLM_API_KEY="..."
 export LLM_MODEL="..."
 ```
 
+如果使用 Anthropic-compatible 网关，可以直接设置：
+
+```bash
+export ANTHROPIC_BASE_URL="https://code-next.akclau.de"
+export ANTHROPIC_AUTH_TOKEN="你的 API key"
+export ANTHROPIC_MODEL="你的模型名"
+```
+
+也可以把这些变量写入项目根目录的 `.env`。`.env` 已经被 `.gitignore` 忽略，不会被提交。
+
 如果返回结构不是：
 
 ```python

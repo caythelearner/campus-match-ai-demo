@@ -99,6 +99,22 @@ demo/index.html
 
 说明：默认图片是离线合成头像卡片，不是真人照片；如果配置图片 API，才会调用外部图像生成服务。静态 HTML 不需要持续启动端口服务；如远程环境需要预览，可临时运行 `python3 -m http.server`，看完后用 `fuser -k 端口/tcp` 关闭。
 
+GitHub Pages 公网 demo 是静态版：它会展示已经写入 `demo/index.html` 的 API trace、RAG trace、图谱和管理员看板，但不能真正运行 Python 后端，也不能安全保存 API key。用户消息框在 GitHub Pages 上会回退到浏览器本地 RAG。
+
+如果要演示“用户输入一句话后实时调用 API”，需要在本机启动带后端的 demo 服务：
+
+```bash
+.venv-lite/bin/python scripts/serve_demo_api.py --port 8023
+```
+
+然后打开：
+
+```text
+http://localhost:8023/
+```
+
+这个服务端会读取 `.env`，前端只请求 `/api/chat-rag`，不会把 key 写进 HTML。
+
 当前已验证命令：
 
 ```bash

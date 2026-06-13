@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import json
-import os
 from typing import Any
 
-import requests
+from .llm_client import call_llm_text, parse_json_response
 
 
 PROFILE_FIELDS = [
@@ -66,36 +65,17 @@ preferred_date, deal_breakers, implicit_intents
 
 
 def llm_extract_profile(user: dict[str, Any]) -> dict[str, Any]:
-    """OpenAI-compatible profile extraction.
-
-    Required environment variables:
-    - LLM_API_URL
-    - LLM_API_KEY
-    - LLM_MODEL
-
-    The response parser assumes a chat-completions-like JSON response. Adjust
-    this function for a specific provider if needed.
-    """
-    api_url = os.getenv("LLM_API_URL")
-    api_key = os.getenv("LLM_API_KEY")
-    model = os.getenv("LLM_MODEL")
-    if not api_url or not api_key or not model:
+    """LLM profile extraction with offline fallback."""
+    content = call_llm_text(
+        system="你是严格输出 JSON 的信息抽取助手。",
+        user=build_profile_extraction_prompt(user),
+        temperature=0.1,
+        max_tokens=900,
+    )
+    if not content:
         return normalize_profile(user)
 
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": "你是严格输出 JSON 的信息抽取助手。"},
-            {"role": "user", "content": build_profile_extraction_prompt(user)},
-        ],
-        "temperature": 0.1,
-    }
-    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    resp = requests.post(api_url, headers=headers, json=payload, timeout=60)
-    resp.raise_for_status()
-    content = resp.json()["choices"][0]["message"]["content"]
-    content = content.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    extracted = json.loads(content)
+    extracted = parse_json_response(content)
     merged = normalize_profile(user)
     merged.update(extracted)
     return merged

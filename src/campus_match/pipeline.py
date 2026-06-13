@@ -6,6 +6,7 @@ from typing import Any
 import numpy as np
 
 from .chat_retrieval import generate_chat_retrieval_traces
+from .bm25_hybrid import generate_bm25_hybrid_traces
 from .config import ProjectPaths
 from .date_context import generate_date_contexts
 from .dynamic_scene import generate_scene_requests, match_scene_requests
@@ -15,13 +16,16 @@ from .graph_analytics import generate_graph_algorithm_trace
 from .graph_rag import explain_matches
 from .governance import apply_governance_to_matches, apply_governance_to_scene_matches, generate_governance_records
 from .image_generation import generate_images_for_profiles
+from .interview_extraction import generate_interview_extraction_traces
 from .intent_search import generate_hybrid_search_traces, generate_intent_graph_traces
 from .io_utils import read_jsonl, write_csv, write_json, write_jsonl
 from .kg import ProfileGraph, build_triples, export_networkx_graph, save_triples
 from .matching import match_users
 from .neo4j_trace import export_neo4j_trace
+from .ontology import generate_ontology_validation
 from .profile_evidence import generate_profile_tag_evidence
 from .profile_extraction import extract_profiles
+from .rag_pipeline import generate_rag_pipeline_traces
 from .relationship_dynamics import generate_relationship_dynamics
 from .synthetic_users import generate_users
 from .vector_search import generate_faiss_ann_benchmark, generate_vector_search_traces
@@ -46,6 +50,15 @@ def run_pipeline(config: dict[str, Any], root: str | Path, run_gnn: bool = False
     write_jsonl(paths.outputs_dir / "profile_tag_evidence.jsonl", profile_tag_evidence)
     write_json(paths.outputs_dir / "profile_tag_evidence.json", profile_tag_evidence)
 
+    interview_extraction_traces = generate_interview_extraction_traces(
+        profiles,
+        max_users=int(gen_cfg.get("interview_extraction_max_users", 8)),
+        use_llm=bool(gen_cfg.get("use_llm_interview_extraction", False)),
+        llm_max_users=int(gen_cfg.get("llm_interview_max_users", 2)),
+    )
+    write_jsonl(paths.outputs_dir / "interview_extraction_traces.jsonl", interview_extraction_traces)
+    write_json(paths.outputs_dir / "interview_extraction_traces.json", interview_extraction_traces)
+
     image_rows = generate_images_for_profiles(
         profiles,
         paths.images_dir,
@@ -59,6 +72,9 @@ def run_pipeline(config: dict[str, Any], root: str | Path, run_gnn: bool = False
     save_triples(paths.data_dir / "triples.csv", triples)
     export_networkx_graph(triples, paths.outputs_dir / "knowledge_graph.gexf")
     graph = ProfileGraph(triples)
+
+    ontology_validation = generate_ontology_validation(profiles, triples)
+    write_json(paths.outputs_dir / "ontology_validation.json", ontology_validation)
 
     embeddings = build_embeddings(profiles, image_rows, paths.indexes_dir, config)
     vector_search_traces = generate_vector_search_traces(
@@ -93,6 +109,16 @@ def run_pipeline(config: dict[str, Any], root: str | Path, run_gnn: bool = False
     write_json(paths.outputs_dir / "intent_graph_traces.json", intent_graph_traces)
     write_jsonl(paths.outputs_dir / "hybrid_search_traces.jsonl", hybrid_search_traces)
     write_json(paths.outputs_dir / "hybrid_search_traces.json", hybrid_search_traces)
+
+    bm25_hybrid_traces = generate_bm25_hybrid_traces(
+        profiles,
+        embeddings["text"],
+        dim=int(config.get("embedding_dim", 384)),
+        query_encoder=embeddings.get("text_embedder"),
+        top_k=5,
+    )
+    write_jsonl(paths.outputs_dir / "bm25_hybrid_traces.jsonl", bm25_hybrid_traces)
+    write_json(paths.outputs_dir / "bm25_hybrid_traces.json", bm25_hybrid_traces)
 
     governance_records = generate_governance_records(profiles, seed=seed)
     write_jsonl(paths.outputs_dir / "governance_records.jsonl", governance_records)
@@ -143,6 +169,17 @@ def run_pipeline(config: dict[str, Any], root: str | Path, run_gnn: bool = False
     )
     write_jsonl(paths.outputs_dir / "chat_vector_retrieval_trace.jsonl", chat_retrieval_traces)
     write_json(paths.outputs_dir / "chat_vector_retrieval_trace.json", chat_retrieval_traces)
+
+    rag_pipeline_traces = generate_rag_pipeline_traces(
+        profiles,
+        explained,
+        dim=int(config.get("embedding_dim", 384)),
+        use_llm=bool(gen_cfg.get("use_llm_rag_generation", False)),
+        llm_max_traces=int(gen_cfg.get("llm_rag_max_traces", 4)),
+        max_profiles=int(gen_cfg.get("rag_pipeline_max_profiles", 2)),
+    )
+    write_jsonl(paths.outputs_dir / "rag_pipeline_traces.jsonl", rag_pipeline_traces)
+    write_json(paths.outputs_dir / "rag_pipeline_traces.json", rag_pipeline_traces)
 
     scene_cfg = config.get("scene_matching", {})
     scene_requests = generate_scene_requests(
@@ -205,11 +242,20 @@ def run_pipeline(config: dict[str, Any], root: str | Path, run_gnn: bool = False
         "n_triples": len(triples),
         "n_matches": len(matches),
         "n_chat_retrieval_traces": len(chat_retrieval_traces),
+        "n_rag_pipeline_traces": len(rag_pipeline_traces),
         "n_vector_search_traces": len(vector_search_traces),
         "faiss_ann_benchmark_status": faiss_ann_benchmark.get("status"),
         "n_intent_graph_traces": len(intent_graph_traces),
         "n_hybrid_search_traces": len(hybrid_search_traces),
+        "n_bm25_hybrid_traces": len(bm25_hybrid_traces),
         "n_profile_tag_evidence": len(profile_tag_evidence),
+        "n_interview_extraction_traces": len(interview_extraction_traces),
+        "n_llm_interview_api_attempts": sum(1 for row in interview_extraction_traces if row.get("llm_attempted")),
+        "n_llm_interview_extraction_traces": sum(1 for row in interview_extraction_traces if row.get("llm_used")),
+        "ontology_validation_status": ontology_validation.get("status"),
+        "ontology_valid_ratio": ontology_validation.get("valid_ratio"),
+        "n_llm_rag_api_attempts": sum(1 for row in rag_pipeline_traces if row.get("llm_attempted")),
+        "n_llm_rag_pipeline_traces": sum(1 for row in rag_pipeline_traces if row.get("llm_used")),
         "graph_algorithm_trace_status": graph_algorithm_trace.get("status"),
         "n_governance_records": len(governance_records),
         "n_scene_requests": len(scene_requests),
