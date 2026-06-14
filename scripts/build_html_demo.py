@@ -1038,6 +1038,37 @@ HTML_TEMPLATE = """<!doctype html>
       color: inherit;
     }
 
+    .user-shortcuts {
+      display: flex;
+      gap: 8px;
+      flex-wrap: nowrap;
+      margin-top: 10px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .user-shortcuts::-webkit-scrollbar {
+      display: none;
+    }
+
+    .user-shortcut {
+      flex: 0 0 auto;
+      border: 1px solid rgba(255,255,255,0.74);
+      border-radius: 999px;
+      min-height: 34px;
+      padding: 7px 12px;
+      background: rgba(255,255,255,0.66);
+      color: var(--ink);
+      box-shadow: 0 8px 18px rgba(72,76,135,0.10);
+      white-space: nowrap;
+    }
+
+    .user-shortcut.active {
+      background: linear-gradient(135deg, #231f63, #8aa8ff 70%, #efb28d);
+      color: #ffffff;
+      border-color: rgba(255,255,255,0.82);
+    }
+
     .user-nav {
       display: grid;
       grid-template-columns: repeat(4, minmax(90px, 1fr));
@@ -1457,6 +1488,9 @@ HTML_TEMPLATE = """<!doctype html>
       background: rgba(255, 255, 255, 0.96);
       border: 1px solid var(--line);
       box-shadow: 0 4px 12px rgba(16, 24, 40, 0.05);
+      line-height: 1.55;
+      word-break: normal;
+      overflow-wrap: break-word;
     }
 
     .message.me {
@@ -1515,6 +1549,8 @@ HTML_TEMPLATE = """<!doctype html>
       margin: 0;
       color: var(--ink);
       line-height: 1.65;
+      word-break: normal;
+      overflow-wrap: break-word;
     }
 
     .quick-replies {
@@ -1531,6 +1567,17 @@ HTML_TEMPLATE = """<!doctype html>
       padding: 7px 10px;
       color: var(--ink);
       max-width: 100%;
+      line-height: 1.42;
+      word-break: normal;
+      overflow-wrap: break-word;
+    }
+
+    .quick-replies .quick-reply {
+      flex: 0 0 min(100%, 320px);
+      min-width: 220px;
+      text-align: left;
+      white-space: normal;
+      border-radius: 18px;
     }
 
     .quick-reply:hover {
@@ -2675,6 +2722,21 @@ HTML_TEMPLATE = """<!doctype html>
       font-size: 12px;
     }
 
+    #userApp .user-shortcuts {
+      margin-top: 8px;
+    }
+
+    #userApp .user-shortcut {
+      min-height: 32px;
+      padding: 7px 11px;
+      font-size: 12px;
+      color: var(--u-ink);
+    }
+
+    #userApp .user-shortcut.active {
+      color: #ffffff;
+    }
+
     #userApp .user-nav {
       position: fixed;
       left: 50%;
@@ -2785,6 +2847,18 @@ HTML_TEMPLATE = """<!doctype html>
     #userApp .quick-replies::-webkit-scrollbar,
     #userApp .metrics::-webkit-scrollbar {
       display: none;
+    }
+
+    #userApp .quick-replies {
+      align-items: stretch;
+    }
+
+    #userApp .quick-replies .quick-reply {
+      flex: 0 0 min(86vw, 330px);
+      min-width: min(86vw, 280px);
+      padding: 10px 12px;
+      border-radius: 18px;
+      line-height: 1.45;
     }
 
     #userApp .day-pill {
@@ -3619,6 +3693,10 @@ HTML_TEMPLATE = """<!doctype html>
         <div>
 	          <h2>今日星球</h2>
           <p id="experienceStatus"></p>
+          <div class="user-shortcuts" aria-label="星球快捷入口">
+            <button id="shortcutLove" class="user-shortcut" type="button">心动星球</button>
+            <button id="shortcutLightning" class="user-shortcut" type="button">闪电搭子</button>
+          </div>
         </div>
       </header>
       <section id="planetPane" class="user-pane">
@@ -3829,6 +3907,17 @@ HTML_TEMPLATE = """<!doctype html>
     document.getElementById("userHome").addEventListener("click", () => showMode("chooser"));
     document.getElementById("userToAdmin").addEventListener("click", () => showMode("admin"));
     document.getElementById("resetExperience").addEventListener("click", resetExperience);
+    document.getElementById("shortcutLove").addEventListener("click", () => {
+      state.userTab = "planet";
+      state.planetMode = "love";
+      renderUserExperience();
+    });
+    document.getElementById("shortcutLightning").addEventListener("click", () => {
+      state.userTab = "planet";
+      state.planetMode = "lightning";
+      state.selectedAction = "scene";
+      renderUserExperience();
+    });
     document.getElementById("submitExperience").addEventListener("click", submitExperienceAction);
     document.getElementById("sendMessageButton").addEventListener("click", () => {
       sendChatMessage(document.getElementById("messageText").value);
@@ -6480,6 +6569,8 @@ HTML_TEMPLATE = """<!doctype html>
       renderExperienceTimeline();
       updateExperienceControls();
       document.getElementById("experienceStatus").textContent = `${profile.display_name} · ${state.experienceComplete ? "7 天已结束" : `第 ${state.experienceDay} 天`} · ${userTabs.find((tab) => tab[0] === state.userTab)?.[1] || "星球"}`;
+      document.getElementById("shortcutLove").classList.toggle("active", state.userTab === "planet" && state.planetMode === "love");
+      document.getElementById("shortcutLightning").classList.toggle("active", state.userTab === "planet" && state.planetMode === "lightning");
     }
 
     function renderUserTabs() {
@@ -6915,6 +7006,10 @@ HTML_TEMPLATE = """<!doctype html>
         button.addEventListener("click", () => {
           if (state.experienceComplete) return;
           state.selectedAction = button.dataset.action;
+          if (state.selectedAction === "scene") {
+            state.userTab = "planet";
+            state.planetMode = "lightning";
+          }
           renderUserExperience();
         });
       });
@@ -7611,7 +7706,7 @@ HTML_TEMPLATE = """<!doctype html>
         if (score > (scores[route] || 0)) route = key;
       }
       const action = experienceActions.find((item) => item.id === route) || experienceActions[0];
-      const routeTab = route === "scene" ? "radar" : route === "chat" ? "messages" : route === "date" ? "messages" : route === "feedback" ? "archive" : "planet";
+      const routeTab = route === "scene" ? "planet" : route === "chat" ? "messages" : route === "date" ? "messages" : route === "feedback" ? "archive" : "planet";
       const routeMode = route === "scene" ? "lightning" : "love";
       return {
         raw_text: value,
