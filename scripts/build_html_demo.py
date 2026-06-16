@@ -46,6 +46,7 @@ def js_data(payload: dict[str, Any]) -> str:
 def build_payload(root: Path) -> dict[str, Any]:
     return {
         "generatedAt": datetime.now().isoformat(timespec="seconds"),
+        "demoVersion": "2026-06-16-interview-evidence-tab",
         "imageBase": "assets",
         "profiles": load_json(root / "data/profiles.json", []),
         "matches": load_json(root / "outputs/matches_with_explanations.json", []),
@@ -1625,6 +1626,72 @@ HTML_TEMPLATE = """<!doctype html>
       color: #344054;
     }
 
+    .admin-evidence-banner {
+      border: 1px solid rgba(8, 127, 115, 0.28);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 18px 18px, rgba(255,255,255,0.32) 1px, transparent 1.3px),
+        linear-gradient(135deg, #0e514a 0%, #19363b 58%, #7a4a21 100%);
+      background-size: 70px 70px, auto;
+      color: #ffffff;
+      padding: 16px;
+      margin: 0 0 14px;
+      box-shadow: 0 22px 52px rgba(24, 34, 48, 0.22);
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .admin-evidence-banner h3,
+    .admin-evidence-banner p {
+      color: inherit;
+      margin-top: 0;
+    }
+
+    .admin-evidence-banner .soft-kpi {
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.24);
+      color: #ffffff;
+    }
+
+    .admin-evidence-banner .soft-kpi span,
+    .admin-evidence-banner .muted {
+      color: rgba(255,255,255,0.76);
+    }
+
+    .admin-evidence-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .admin-evidence-actions .tab-button {
+      background: rgba(255,255,255,0.12);
+      color: #ffffff;
+      border-color: rgba(255,255,255,0.28);
+    }
+
+    .admin-evidence-actions .tab-button.active {
+      background: #ffffff;
+      color: #0e514a;
+      border-color: #ffffff;
+    }
+
+    .version-stamp {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid rgba(8,127,115,0.18);
+      border-radius: 999px;
+      padding: 2px 8px;
+      background: rgba(217,242,237,0.72);
+      color: var(--accent-strong);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
     .dashboard-grid {
       display: grid;
       grid-template-columns: minmax(420px, 1.45fr) minmax(300px, 0.75fr);
@@ -2962,6 +3029,7 @@ HTML_TEMPLATE = """<!doctype html>
       .scene-layout,
       .two-col,
       .mode-hero,
+      .admin-evidence-banner,
       .neo-detail-grid,
       .user-app,
       .archive-grid,
@@ -2978,6 +3046,10 @@ HTML_TEMPLATE = """<!doctype html>
       }
 
       .tabs {
+        justify-content: flex-start;
+      }
+
+      .admin-evidence-actions {
         justify-content: flex-start;
       }
 
@@ -3015,6 +3087,15 @@ HTML_TEMPLATE = """<!doctype html>
 
       .score-row {
         grid-template-columns: 82px 1fr 38px;
+      }
+
+      .admin-evidence-banner {
+        padding: 13px;
+      }
+
+      .admin-evidence-actions .tab-button {
+        width: 100%;
+        justify-content: center;
       }
     }
 
@@ -3768,6 +3849,7 @@ HTML_TEMPLATE = """<!doctype html>
       ["matches", "匹配推荐"],
       ["scenes", "搭子任务"],
       ["relations", "关系安全"],
+      ["interview", "访谈抽取"],
       ["graph", "技术图谱"],
       ["api", "API Trace"]
     ];
@@ -4499,11 +4581,13 @@ HTML_TEMPLATE = """<!doctype html>
         matches: renderMatches,
         scenes: renderScenes,
         relations: renderRelationsSafety,
+        interview: renderInterviewEvidence,
         graph: renderGraph,
         api: renderApiTraces
       };
       renderers[state.tab]();
-      const info = `生成时间 ${escapeHtml(data.generatedAt || "")} | 当前用户 ${escapeHtml(state.selectedUserId || "无")}`;
+      attachTabJumpEvents();
+      const info = `生成时间 ${escapeHtml(data.generatedAt || "")} | 当前用户 ${escapeHtml(state.selectedUserId || "无")} | <span class="version-stamp">版本 ${escapeHtml(data.demoVersion || "unknown")}</span>`;
       document.getElementById("generatedInfo").innerHTML = info;
       document.getElementById("brandSubtitle").textContent = `${(data.profiles || []).length}人合成校园匹配 Demo`;
     }
@@ -4516,6 +4600,16 @@ HTML_TEMPLATE = """<!doctype html>
         button.addEventListener("click", () => {
           state.tab = button.dataset.tab;
           render();
+        });
+      });
+    }
+
+    function attachTabJumpEvents() {
+      document.querySelectorAll("[data-go-tab]").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.tab = button.dataset.goTab;
+          render();
+          window.scrollTo({top: 0, behavior: "smooth"});
         });
       });
     }
@@ -4650,6 +4744,10 @@ HTML_TEMPLATE = """<!doctype html>
     function renderDashboard() {
       const summary = data.summary || {};
       const neo4j = data.neo4jSummary || summary.neo4j_trace || {};
+      const interviewTraces = data.interviewExtractionTraces || [];
+      const ontology = data.ontologyValidation || {};
+      const interviewApiAttempts = interviewTraces.filter((row) => row.llm_attempted).length;
+      const interviewApiUsed = interviewTraces.filter((row) => row.llm_used).length;
       const heatRows = buildDailyAdminRows(state.adminDay || 1);
       const avgHeat = heatRows.length ? heatRows.reduce((sum, row) => sum + row.heat, 0) / heatRows.length : 0;
       const riskyUsers = (data.governanceRecords || []).filter((record) => {
@@ -4661,6 +4759,23 @@ HTML_TEMPLATE = """<!doctype html>
           <h3>星图看板</h3>
           <span class="muted">把用户、兴趣、价值观、地点、任务和关系状态放到一张可讲的图里</span>
         </div>
+        <section class="admin-evidence-banner" id="dashboard-interview-entry">
+          <div>
+            <h3>访谈实体关系抽取</h3>
+            <p class="muted">这里能直接看 4 轮模拟访谈、实体抽取、三元组生成和本体校验结果；不是说明文字，是 outputs 里的真实 trace。</p>
+            <div class="soft-kpi-grid">
+              <div class="soft-kpi"><span>抽取 trace</span><strong>${escapeHtml(interviewTraces.length)}</strong></div>
+              <div class="soft-kpi"><span>API 调用</span><strong>${escapeHtml(interviewApiAttempts)}/${escapeHtml(interviewApiUsed)}</strong></div>
+              <div class="soft-kpi"><span>校验三元组</span><strong>${escapeHtml(ontology.n_triples_checked || 0)}</strong></div>
+              <div class="soft-kpi"><span>通过率</span><strong>${escapeHtml(ontology.valid_ratio ?? "未生成")}</strong></div>
+            </div>
+          </div>
+          <div class="admin-evidence-actions">
+            <button class="tab-button active" type="button" data-go-tab="interview">打开访谈抽取</button>
+            <button class="tab-button" type="button" data-go-tab="graph">打开技术图谱</button>
+            <button class="tab-button" type="button" data-go-tab="api">打开 API Trace</button>
+          </div>
+        </section>
         <div class="dashboard-grid">
           <section class="graph-stage">
             <div class="section-head">
@@ -6119,6 +6234,87 @@ HTML_TEMPLATE = """<!doctype html>
           page: "知识治理、技术证据"
         }
       ];
+    }
+
+    function renderInterviewEvidence() {
+      const interviewTraces = data.interviewExtractionTraces || [];
+      const ontology = data.ontologyValidation || {};
+      const firstInterview = interviewTraces[0] || {};
+      const llmInterviewAttempts = interviewTraces.filter((row) => row.llm_attempted).length;
+      const llmInterviewCount = interviewTraces.filter((row) => row.llm_used).length;
+      const extractedEntities = interviewTraces.reduce((sum, row) => sum + ((row.extracted_entities || []).length), 0);
+      const extractedTriples = interviewTraces.reduce((sum, row) => sum + ((row.extracted_triples || []).length), 0);
+      document.getElementById("content").innerHTML = `
+        <section class="tech-cockpit" id="interview-extraction-panel">
+          <div class="section-head">
+            <div>
+              <h3>访谈实体关系抽取</h3>
+              <p class="muted">从 AI 模拟访谈问答中抽取实体、属性和关系，再写成 User-Entity 三元组，并用本体约束检查 domain、range 和 relation 是否合法。</p>
+            </div>
+            ${statusPill(interviewTraces.length ? `${interviewTraces.length} traces` : "未生成", interviewTraces.length ? "ok" : "missing")}
+          </div>
+          <div class="tech-flow">
+            <div class="tech-step"><strong>1 访谈输入</strong><span>4 轮问题和回答</span></div>
+            <div class="tech-step"><strong>2 实体抽取</strong><span>兴趣、价值观、雷点、时间等字段</span></div>
+            <div class="tech-step"><strong>3 关系生成</strong><span>User -> LIKES / VALUES / AVOIDS</span></div>
+            <div class="tech-step"><strong>4 本体校验</strong><span>检查 schema、domain、range</span></div>
+            <div class="tech-step"><strong>5 图谱写入</strong><span>进入 CSV、GraphRAG、Neo4j</span></div>
+          </div>
+        </section>
+        <div class="metrics">
+          ${metric("访谈用户", interviewTraces.length)}
+          ${metric("抽取实体", extractedEntities)}
+          ${metric("抽取三元组", extractedTriples)}
+          ${metric("API 调用", `${llmInterviewAttempts}/${llmInterviewCount}`)}
+          ${metric("本体校验", ontology.status ? `${ontology.status} / ${ontology.valid_ratio}` : "未生成")}
+          ${metric("校验三元组", ontology.n_triples_checked || 0)}
+        </div>
+        <div class="two-col" style="margin-top:12px">
+          <section class="panel">
+            <div class="section-head">
+              <h3>4 轮访谈 -> 三元组样例</h3>
+              ${statusPill(interviewTraces.length ? (firstInterview.status || "已生成") : "未生成", interviewTraces.length ? "ok" : "missing")}
+            </div>
+            ${interviewTraces.length ? renderInterviewExtractionTrace(firstInterview) : `<div class="empty">还没有访谈抽取 trace。运行 pipeline 后会生成 outputs/interview_extraction_traces.json。</div>`}
+          </section>
+          <section class="panel">
+            <div class="section-head">
+              <h3>本体约束与图谱质量</h3>
+              ${statusPill(ontology.status || "未生成", ontology.status === "ok" ? "ok" : ontology.status ? "partial" : "missing")}
+            </div>
+            ${ontology.status ? renderOntologyValidation(ontology) : `<div class="empty">还没有本体校验结果。</div>`}
+          </section>
+        </div>
+        <section class="panel" style="margin-top:12px">
+          <div class="section-head">
+            <h3>全部访谈抽取记录</h3>
+            <span class="muted">展示每个用户的输入轮数、实体数、三元组数和生成方式</span>
+          </div>
+          <div class="trace-list">
+            ${interviewTraces.length ? interviewTraces.slice(0, 10).map((row) => `
+              <div class="trace-row">
+                <span>${escapeHtml(row.user_id)}</span>
+                <strong>${escapeHtml(row.display_name || row.user_id)}<br><span>${escapeHtml(row.extraction_method || "unknown")} / ${escapeHtml(row.llm_model || "本地规则")}</span></strong>
+                <span>${escapeHtml((row.raw_interview || []).length)}轮 / ${escapeHtml((row.extracted_entities || []).length)}实体 / ${escapeHtml((row.extracted_triples || []).length)}边</span>
+              </div>
+            `).join("") : `<div class="empty">没有访谈抽取记录</div>`}
+          </div>
+        </section>
+        <section class="panel" style="margin-top:12px">
+          <div class="section-head">
+            <h3>答辩讲法</h3>
+            <span class="muted">这页对应“知识获取 -> 知识表示 -> 质量校验”</span>
+          </div>
+          <p class="copy">这一步解决的是自然语言不能直接参与图检索的问题。用户访谈原本是非结构化文本，系统先把回答映射到兴趣、价值观、沟通风格、雷点、空闲时间等字段，再转成三元组。后续推荐、GraphRAG、Neo4j 可视化和标签证据都用这些结构化结果作为底层知识。</p>
+          <p class="copy">本体校验不是展示噱头，它会检查关系类型和实体类型是否匹配，例如用户可以通过 LIKES 指向 Interest，通过 VALUES 指向 Value，但不能随便把地点当作价值观写入。当前校验结果写在 outputs/ontology_validation.json。</p>
+          <div class="tag-row">
+            <span class="tag blue">实体抽取</span>
+            <span class="tag blue">三元组生成</span>
+            <span class="tag blue">Ontology Validation</span>
+            <span class="tag blue">GraphRAG 证据来源</span>
+          </div>
+        </section>
+      `;
     }
 
     function renderTechEvidence() {
