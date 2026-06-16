@@ -6195,6 +6195,22 @@ HTML_TEMPLATE = """<!doctype html>
           ${metric("GCN 风险分类", gnnRisk.status === "trained" ? `AUC ${gnnRisk.test_auc}` : "未训练")}
           ${metric("Neo4j 产品图", `${neo4j.n_nodes || 0}/${neo4j.n_relationships || 0}`)}
         </div>
+        <div class="two-col" style="margin-top:12px">
+          <section id="interview-extraction-panel" class="panel">
+            <div class="section-head">
+              <h3>访谈实体关系抽取</h3>
+              ${statusPill(firstInterview.status || "未生成", interviewTraces.length ? "ok" : "missing")}
+            </div>
+            ${interviewTraces.length ? renderInterviewExtractionTrace(firstInterview) : `<div class="empty">还没有访谈抽取 trace。</div>`}
+          </section>
+          <section id="ontology-validation-panel" class="panel">
+            <div class="section-head">
+              <h3>本体约束与图谱质量</h3>
+              ${statusPill(ontology.status || "未生成", ontology.status === "ok" ? "ok" : ontology.status ? "partial" : "missing")}
+            </div>
+            ${ontology.status ? renderOntologyValidation(ontology) : `<div class="empty">还没有本体校验结果。</div>`}
+          </section>
+        </div>
         <div class="tech-grid">
           ${methodEvidenceRows().map((row) => `
             <article class="tech-card">
@@ -6250,22 +6266,6 @@ HTML_TEMPLATE = """<!doctype html>
               ${statusPill(firstRagPipeline.status || "未生成", ragPipelineTraces.length ? "ok" : "missing")}
             </div>
             ${ragPipelineTraces.length ? renderRagPipelineTrace(firstRagPipeline) : `<div class="empty">还没有 RAG 流水线 trace。</div>`}
-          </section>
-        </div>
-        <div class="two-col" style="margin-top:12px">
-          <section class="panel">
-            <div class="section-head">
-              <h3>访谈实体关系抽取</h3>
-              ${statusPill(firstInterview.status || "未生成", interviewTraces.length ? "ok" : "missing")}
-            </div>
-            ${interviewTraces.length ? renderInterviewExtractionTrace(firstInterview) : `<div class="empty">还没有访谈抽取 trace。</div>`}
-          </section>
-          <section class="panel">
-            <div class="section-head">
-              <h3>本体约束与图谱质量</h3>
-              ${statusPill(ontology.status || "未生成", ontology.status === "ok" ? "ok" : ontology.status ? "partial" : "missing")}
-            </div>
-            ${ontology.status ? renderOntologyValidation(ontology) : `<div class="empty">还没有本体校验结果。</div>`}
           </section>
         </div>
         <div class="two-col" style="margin-top:12px">
