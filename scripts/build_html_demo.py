@@ -46,7 +46,7 @@ def js_data(payload: dict[str, Any]) -> str:
 def build_payload(root: Path) -> dict[str, Any]:
     return {
         "generatedAt": datetime.now().isoformat(timespec="seconds"),
-        "demoVersion": "2026-06-16-interview-evidence-tab",
+        "demoVersion": "2026-06-16-ppt-public-map",
         "imageBase": "assets",
         "profiles": load_json(root / "data/profiles.json", []),
         "matches": load_json(root / "outputs/matches_with_explanations.json", []),
@@ -3845,12 +3845,14 @@ HTML_TEMPLATE = """<!doctype html>
     };
     const tabs = [
       ["dashboard", "总览"],
+      ["ppt", "PPT取图"],
       ["profiles", "用户画像"],
       ["matches", "匹配推荐"],
       ["scenes", "搭子任务"],
       ["relations", "关系安全"],
       ["interview", "访谈抽取"],
-      ["graph", "技术图谱"],
+      ["tech", "技术证据"],
+      ["graph", "Neo4j图谱"],
       ["api", "API Trace"]
     ];
     const featureCatalog = [
@@ -3902,6 +3904,71 @@ HTML_TEMPLATE = """<!doctype html>
         user: "用户不直接看到这些技术细节，只感受到推荐更可解释、搜索更准、提醒更稳。",
         tech: "Neo4j CSV/Cypher、Flat/IVF/HNSW、GraphSAGE、GCN。",
         course: "图数据库、ANN 检索、图神经网络。"
+      }
+    ];
+    const pptShotGuide = [
+      {
+        slide: "第1页",
+        title: "系统链路与真实运行规模",
+        tab: "dashboard",
+        path: "管理员后台 -> 总览",
+        target: "截顶部星图看板、项目运行态、访谈抽取入口和 Neo4j 产品图规模。",
+        evidence: "能看到 120 用户、3365 三元组、5209/14600 Neo4j 产品图，以及 demo 版本号。",
+        note: "适合放 PPT 的系统总览页，说明不是静态截图，而是后台读取生成后的 trace。"
+      },
+      {
+        slide: "第2页",
+        title: "访谈抽取、本体、三元组",
+        tab: "interview",
+        path: "管理员后台 -> 访谈抽取",
+        target: "截“4 轮访谈 -> 三元组样例”和“本体约束与图谱质量”。",
+        evidence: "能看到 raw_interview、extracted_triples、抽取实体数、API 10/10、3365/3365 校验。",
+        note: "PPT 讲知识获取、关系抽取、Ontology Validation 时用这张。"
+      },
+      {
+        slide: "第3页",
+        title: "Text-to-Graph、BM25、FAISS",
+        tab: "tech",
+        path: "管理员后台 -> 技术证据",
+        target: "截“意图图谱样例”“BM25 + 向量 + 图约束”“FAISS ANN 索引对比”。",
+        evidence: "能看到显性意图、隐性意图、画像字段、BM25 k1/b、融合权重、Flat/IVF/HNSW 对比。",
+        note: "PPT 讲检索链路时不要只截搜索框，截这个证据区。"
+      },
+      {
+        slide: "第4页",
+        title: "Neo4j 产品图与 GraphRAG 路径",
+        tab: "graph",
+        path: "管理员后台 -> Neo4j图谱",
+        target: "截“产品图可视化”，点 U001 或推荐节点后再截节点详情。",
+        evidence: "能看到用户、推荐、GraphRAG、搭子、热度、首约、安全、治理节点和关系类型。",
+        note: "这页适合证明图谱不是装饰图，节点可拖拽、可点开字段。"
+      },
+      {
+        slide: "第5页",
+        title: "匹配排序、GraphSAGE、GCN",
+        tab: "tech",
+        path: "管理员后台 -> 技术证据",
+        target: "截“GNN 链接预测样例”和“GCN 风险节点分类”；也可补截“匹配推荐”的分数拆解。",
+        evidence: "能看到 GraphSAGE link score、GCN risk probability、AUC、Acc，以及分数如何进入排序。",
+        note: "PPT 讲训练模型时用这张，不要只写模型名。"
+      },
+      {
+        slide: "第6页",
+        title: "聊天 RAG 与 API Trace",
+        tab: "api",
+        path: "管理员后台 -> API Trace",
+        target: "截 RAG trace 明细；再到“技术证据”截完整 RAG 流水线。",
+        evidence: "能看到 query rewrite、router、retrieval、context compression、final_suggestion、safety verifier。",
+        note: "用于解释回复为什么不再重复同一句剧本杀问题。"
+      },
+      {
+        slide: "第7页",
+        title: "闪电搭子、热度、首约、安全治理",
+        tab: "scenes",
+        path: "管理员后台 -> 搭子任务 / 关系安全",
+        target: "截闪电搭子任务候选排序，再切到关系安全截热度曲线、首约安全和信用治理。",
+        evidence: "能看到任务类型、时间地点、安全等级、候选分数、信用分、可见度和复核策略。",
+        note: "用于讲动态闭环：即时任务、关系状态和安全治理会反过来影响推荐。"
       }
     ];
     const experienceActions = [
@@ -4568,20 +4635,23 @@ HTML_TEMPLATE = """<!doctype html>
     function render() {
       renderTabs();
       renderUserList();
-      const isDashboard = state.tab === "dashboard";
-      document.getElementById("metrics").hidden = isDashboard;
-      document.getElementById("profile").hidden = isDashboard;
-      if (!isDashboard) {
+      const hideContextTabs = new Set(["dashboard", "ppt", "tech", "interview", "graph", "api"]);
+      const hideContext = hideContextTabs.has(state.tab);
+      document.getElementById("metrics").hidden = hideContext;
+      document.getElementById("profile").hidden = hideContext;
+      if (!hideContext) {
         renderMetrics();
         renderProfile();
       }
       const renderers = {
         dashboard: renderDashboard,
+        ppt: renderPptGuide,
         profiles: renderProfilesAdmin,
         matches: renderMatches,
         scenes: renderScenes,
         relations: renderRelationsSafety,
         interview: renderInterviewEvidence,
+        tech: renderTechEvidence,
         graph: renderGraph,
         api: renderApiTraces
       };
@@ -4771,8 +4841,9 @@ HTML_TEMPLATE = """<!doctype html>
             </div>
           </div>
           <div class="admin-evidence-actions">
-            <button class="tab-button active" type="button" data-go-tab="interview">打开访谈抽取</button>
-            <button class="tab-button" type="button" data-go-tab="graph">打开技术图谱</button>
+            <button class="tab-button active" type="button" data-go-tab="ppt">打开PPT取图</button>
+            <button class="tab-button" type="button" data-go-tab="interview">打开访谈抽取</button>
+            <button class="tab-button" type="button" data-go-tab="graph">打开Neo4j图谱</button>
             <button class="tab-button" type="button" data-go-tab="api">打开 API Trace</button>
           </div>
         </section>
@@ -4843,6 +4914,64 @@ HTML_TEMPLATE = """<!doctype html>
         </div>
       `;
       attachDashboardGraphEvents();
+    }
+
+    function renderPptGuide() {
+      const summary = data.summary || {};
+      const neo4j = data.neo4jSummary || summary.neo4j_trace || {};
+      const emb = data.embeddingMetadata || {};
+      const gnn = data.gnnMetrics || {};
+      const gnnRisk = data.gnnRiskMetrics || {};
+      document.getElementById("content").innerHTML = `
+        <section class="tech-cockpit" id="ppt-shot-index">
+          <div class="section-head">
+            <div>
+              <h3>PPT 截图索引</h3>
+              <p class="muted">做 PPT 的同学只看公网也能按这个页取图：每张 PPT 对应一个后台位置、一个截图范围和一条讲解证据。</p>
+            </div>
+            <span class="score-pill">public demo aligned</span>
+          </div>
+          <div class="tech-flow">
+            <div class="tech-step"><strong>1 总览</strong><span>系统链路和规模</span></div>
+            <div class="tech-step"><strong>2 访谈</strong><span>实体关系抽取</span></div>
+            <div class="tech-step"><strong>3 检索</strong><span>Text-to-Graph / BM25 / FAISS</span></div>
+            <div class="tech-step"><strong>4 图谱</strong><span>Neo4j / GraphRAG</span></div>
+            <div class="tech-step"><strong>5 模型</strong><span>GraphSAGE / GCN</span></div>
+            <div class="tech-step"><strong>6 RAG</strong><span>回复 trace / API trace</span></div>
+            <div class="tech-step"><strong>7 治理</strong><span>搭子 / 热度 / 安全</span></div>
+          </div>
+        </section>
+        <div class="metrics">
+          ${metric("画像三元组", summary.n_triples || 0)}
+          ${metric("Neo4j 产品图", `${neo4j.n_nodes || 0}/${neo4j.n_relationships || 0}`)}
+          ${metric("文本向量", emb.text_shape ? emb.text_shape.join(" x ") : "未生成")}
+          ${metric("GraphSAGE", gnn.status === "trained" ? `AUC ${gnn.test_auc}` : "未训练")}
+          ${metric("GCN", gnnRisk.status === "trained" ? `AUC ${gnnRisk.test_auc}` : "未训练")}
+          ${metric("访谈/API", `${(data.interviewExtractionTraces || []).filter((row) => row.llm_used).length}/${(data.interviewExtractionTraces || []).filter((row) => row.llm_attempted).length}`)}
+        </div>
+        <div class="feature-map" style="margin-top:12px">
+          ${pptShotGuide.map((item) => `
+            <article class="feature-card ppt-shot-card">
+              <div class="section-head">
+                <h4>${escapeHtml(item.slide)}：${escapeHtml(item.title)}</h4>
+                <button class="tab-button" type="button" data-go-tab="${escapeHtml(item.tab)}">打开对应后台</button>
+              </div>
+              <p><strong>公网路径：</strong>${escapeHtml(item.path)}</p>
+              <p><strong>截图范围：</strong>${escapeHtml(item.target)}</p>
+              <p><strong>画面里能证明：</strong>${escapeHtml(item.evidence)}</p>
+              <p><strong>PPT用途：</strong>${escapeHtml(item.note)}</p>
+            </article>
+          `).join("")}
+        </div>
+        <section class="panel" style="margin-top:12px">
+          <div class="section-head">
+            <h3>统一取图规则</h3>
+            <span class="muted">避免 PPT 和公网 demo 对不上</span>
+          </div>
+          <p class="copy">所有截图都从公网链接进入：先点“管理员后台”，再按上面的路径切换 tab。截图时保留 tab 名和卡片标题，PPT 同学就能把“讲稿中的技术点”和“公网后台的证据区域”对上。</p>
+          <p class="copy">前 7 分钟 PPT 可以少放参数，但画面上必须出现对应技术做成了什么：三元组、本体校验、意图图谱、Top-K 检索、ANN 对比、Neo4j 子图、GraphRAG 路径、GNN/GCN 结果、RAG trace、治理策略。</p>
+        </section>
+      `;
     }
 
     function renderKnowledgeGraphSvg() {
