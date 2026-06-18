@@ -3845,7 +3845,7 @@ HTML_TEMPLATE = """<!doctype html>
     };
     const tabs = [
       ["dashboard", "总览"],
-      ["ppt", "PPT取图"],
+      ["ppt", "证据索引"],
       ["profiles", "用户画像"],
       ["matches", "匹配推荐"],
       ["scenes", "搭子任务"],
@@ -3908,65 +3908,65 @@ HTML_TEMPLATE = """<!doctype html>
     ];
     const pptShotGuide = [
       {
-        slide: "第1页",
+        slide: "主题1",
         title: "系统链路与真实运行规模",
         tab: "dashboard",
         path: "管理员后台 -> 总览",
-        target: "截顶部星图看板、项目运行态、访谈抽取入口和 Neo4j 产品图规模。",
+        target: "展示顶部星图看板、项目运行态、访谈抽取入口和 Neo4j 产品图规模。",
         evidence: "能看到 120 用户、3365 三元组、5209/14600 Neo4j 产品图，以及 demo 版本号。",
-        note: "适合放 PPT 的系统总览页，说明不是静态截图，而是后台读取生成后的 trace。"
+        note: "用于说明系统不是静态图片，而是后台读取生成后的 trace。"
       },
       {
-        slide: "第2页",
+        slide: "主题2",
         title: "访谈抽取、本体、三元组",
         tab: "interview",
         path: "管理员后台 -> 访谈抽取",
-        target: "截“4 轮访谈 -> 三元组样例”和“本体约束与图谱质量”。",
+        target: "展示“4 轮访谈 -> 三元组样例”和“本体约束与图谱质量”。",
         evidence: "能看到 raw_interview、extracted_triples、抽取实体数、API 10/10、3365/3365 校验。",
-        note: "PPT 讲知识获取、关系抽取、Ontology Validation 时用这张。"
+        note: "用于说明知识获取、关系抽取和 Ontology Validation。"
       },
       {
-        slide: "第3页",
+        slide: "主题3",
         title: "Text-to-Graph、BM25、FAISS",
         tab: "tech",
         path: "管理员后台 -> 技术证据",
-        target: "截“意图图谱样例”“BM25 + 向量 + 图约束”“FAISS ANN 索引对比”。",
+        target: "展示“意图图谱样例”“BM25 + 向量 + 图约束”“FAISS ANN 索引对比”。",
         evidence: "能看到显性意图、隐性意图、画像字段、BM25 k1/b、融合权重、Flat/IVF/HNSW 对比。",
-        note: "PPT 讲检索链路时不要只截搜索框，截这个证据区。"
+        note: "用于说明检索链路不是普通搜索框，而是多路证据融合。"
       },
       {
-        slide: "第4页",
+        slide: "主题4",
         title: "Neo4j 产品图与 GraphRAG 路径",
         tab: "graph",
         path: "管理员后台 -> Neo4j图谱",
-        target: "截“产品图可视化”，点 U001 或推荐节点后再截节点详情。",
+        target: "展示“产品图可视化”，点 U001 或推荐节点后查看节点详情。",
         evidence: "能看到用户、推荐、GraphRAG、搭子、热度、首约、安全、治理节点和关系类型。",
         note: "这页适合证明图谱不是装饰图，节点可拖拽、可点开字段。"
       },
       {
-        slide: "第5页",
+        slide: "主题5",
         title: "匹配排序、GraphSAGE、GCN",
         tab: "tech",
         path: "管理员后台 -> 技术证据",
-        target: "截“GNN 链接预测样例”和“GCN 风险节点分类”；也可补截“匹配推荐”的分数拆解。",
+        target: "展示“GNN 链接预测样例”和“GCN 风险节点分类”；也可补看“匹配推荐”的分数拆解。",
         evidence: "能看到 GraphSAGE link score、GCN risk probability、AUC、Acc，以及分数如何进入排序。",
-        note: "PPT 讲训练模型时用这张，不要只写模型名。"
+        note: "用于说明训练模型的输入、输出和评估结果。"
       },
       {
-        slide: "第6页",
+        slide: "主题6",
         title: "聊天 RAG 与 API Trace",
         tab: "api",
         path: "管理员后台 -> API Trace",
-        target: "截 RAG trace 明细；再到“技术证据”截完整 RAG 流水线。",
+        target: "展示 RAG trace 明细；再到“技术证据”查看完整 RAG 流水线。",
         evidence: "能看到 query rewrite、router、retrieval、context compression、final_suggestion、safety verifier。",
         note: "用于解释回复为什么不再重复同一句剧本杀问题。"
       },
       {
-        slide: "第7页",
+        slide: "主题7",
         title: "闪电搭子、热度、首约、安全治理",
         tab: "scenes",
         path: "管理员后台 -> 搭子任务 / 关系安全",
-        target: "截闪电搭子任务候选排序，再切到关系安全截热度曲线、首约安全和信用治理。",
+        target: "展示闪电搭子任务候选排序，再切到关系安全查看热度曲线、首约安全和信用治理。",
         evidence: "能看到任务类型、时间地点、安全等级、候选分数、信用分、可见度和复核策略。",
         note: "用于讲动态闭环：即时任务、关系状态和安全治理会反过来影响推荐。"
       }
@@ -4841,7 +4841,7 @@ HTML_TEMPLATE = """<!doctype html>
             </div>
           </div>
           <div class="admin-evidence-actions">
-            <button class="tab-button active" type="button" data-go-tab="ppt">打开PPT取图</button>
+            <button class="tab-button active" type="button" data-go-tab="ppt">打开证据索引</button>
             <button class="tab-button" type="button" data-go-tab="interview">打开访谈抽取</button>
             <button class="tab-button" type="button" data-go-tab="graph">打开Neo4j图谱</button>
             <button class="tab-button" type="button" data-go-tab="api">打开 API Trace</button>
@@ -4926,8 +4926,8 @@ HTML_TEMPLATE = """<!doctype html>
         <section class="tech-cockpit" id="ppt-shot-index">
           <div class="section-head">
             <div>
-              <h3>PPT 截图索引</h3>
-              <p class="muted">做 PPT 的同学只看公网也能按这个页取图：每张 PPT 对应一个后台位置、一个截图范围和一条讲解证据。</p>
+              <h3>演示证据索引</h3>
+              <p class="muted">按技术主题汇总后台证据：每个主题对应一个后台位置、一个建议展示区域和一条可核验的技术证据。</p>
             </div>
             <span class="score-pill">public demo aligned</span>
           </div>
@@ -4956,20 +4956,20 @@ HTML_TEMPLATE = """<!doctype html>
                 <h4>${escapeHtml(item.slide)}：${escapeHtml(item.title)}</h4>
                 <button class="tab-button" type="button" data-go-tab="${escapeHtml(item.tab)}">打开对应后台</button>
               </div>
-              <p><strong>公网路径：</strong>${escapeHtml(item.path)}</p>
-              <p><strong>截图范围：</strong>${escapeHtml(item.target)}</p>
-              <p><strong>画面里能证明：</strong>${escapeHtml(item.evidence)}</p>
-              <p><strong>PPT用途：</strong>${escapeHtml(item.note)}</p>
+              <p><strong>后台位置：</strong>${escapeHtml(item.path)}</p>
+              <p><strong>建议展示区域：</strong>${escapeHtml(item.target)}</p>
+              <p><strong>技术证据：</strong>${escapeHtml(item.evidence)}</p>
+              <p><strong>适用讲解：</strong>${escapeHtml(item.note)}</p>
             </article>
           `).join("")}
         </div>
         <section class="panel" style="margin-top:12px">
           <div class="section-head">
-            <h3>统一取图规则</h3>
-            <span class="muted">避免 PPT 和公网 demo 对不上</span>
+            <h3>统一展示规则</h3>
+            <span class="muted">让讲解内容和后台证据保持一致</span>
           </div>
-          <p class="copy">所有截图都从公网链接进入：先点“管理员后台”，再按上面的路径切换 tab。截图时保留 tab 名和卡片标题，PPT 同学就能把“讲稿中的技术点”和“公网后台的证据区域”对上。</p>
-          <p class="copy">前 7 分钟 PPT 可以少放参数，但画面上必须出现对应技术做成了什么：三元组、本体校验、意图图谱、Top-K 检索、ANN 对比、Neo4j 子图、GraphRAG 路径、GNN/GCN 结果、RAG trace、治理策略。</p>
+          <p class="copy">展示时先进入“管理员后台”，再按上面的路径切换 tab。建议保留 tab 名和卡片标题，便于把技术点和后台证据区域对应起来。</p>
+          <p class="copy">讲解可以少放参数，但画面上必须出现对应技术做成了什么：三元组、本体校验、意图图谱、Top-K 检索、ANN 对比、Neo4j 子图、GraphRAG 路径、GNN/GCN 结果、RAG trace、治理策略。</p>
         </section>
       `;
     }
